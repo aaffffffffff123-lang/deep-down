@@ -159,9 +159,7 @@
   .card h1.sink span:nth-child(4){transform:translateY(.6em) rotate(4deg);color:#c9652c;clip-path:inset(0 -20% 22% -20%);}
   #tground{width:min(86vw,560px);height:min(3.4vw,20px);margin-top:calc(min(21vw,128px)*.34);background:#8a5a30;border:min(.8vw,5px) solid #1c1009;border-radius:40% 60% 50% 50%/60% 50% 50% 40%;box-shadow:4px 4px 0 #1c1009;}
   #title .btn{margin-top:5vh;font-size:26px !important;padding:16px 52px !important;}
-  #tfinds{display:flex;gap:8px;margin-top:auto;margin-bottom:10px;flex-wrap:wrap;justify-content:center;padding:0 10px;}
-  #tfinds img{width:min(12vw,62px);height:min(12vw,62px);background:#fffdf6;border:3px solid #1c1009;border-radius:6px;box-shadow:3px 3px 0 #1c1009;}
-  #title .hint{margin-bottom:calc(14px + env(safe-area-inset-bottom));background:#fffdf6;border:3px solid #1c1009;border-radius:6px;padding:8px 12px;box-shadow:3px 3px 0 #1c1009;color:#1c1009 !important;font-size:13px !important;max-width:94vw;}
+  #title .hint{margin-top:auto;margin-bottom:calc(14px + env(safe-area-inset-bottom));background:#fffdf6;border:3px solid #1c1009;border-radius:6px;padding:8px 12px;box-shadow:3px 3px 0 #1c1009;color:#1c1009 !important;font-size:13px !important;max-width:94vw;}
   #joyk{background:#fffdf6 !important;border:3px solid #1c1009 !important;box-shadow:none !important;}
   #joy{border:3px solid rgba(28,16,9,.55) !important;background:rgba(255,253,246,.3) !important;}
 </style>
@@ -189,7 +187,6 @@
     <h1 class="sink"><span>침</span><span>잠</span><span>하</span><span>기</span></h1>
     <div id="tground"></div>
     <button id="startBtn" class="btn">시작</button>
-    <div id="tfinds"></div>
     <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 화면으로 이동 · 오른쪽 화면으로 둘러보기</div>
   </div>
   <div id="end" class="card">
@@ -1740,8 +1737,8 @@ const Hut={
     // bedding and a few bones; nothing that takes skill to make
     {const bed=sph(0.62,0x9a6c3e,{roughness:1},14,8);bed.scale.set(1.15,0.1,0.75);bed.position.set(-1.55,0.05,1.0);bed.rotation.y=0.5;S.add(bed);const b2=sph(0.4,0xb48450,{roughness:1},12,8);b2.scale.set(1,0.14,0.8);b2.position.set(-1.7,0.1,0.9);b2.rotation.y=0.9;S.add(b2);
       [[1.55,0.75,0.3],[1.75,1.0,1.4],[1.45,1.05,2.4],[1.8,0.7,0.9]].forEach(([x,z,r],i)=>{const bn=cyl(0.03,0.04,rr(0.4,0.7),i%2?0xeadfc4:0x6a4a2a,{},6);bn.rotation.set(Math.PI/2,0,r);bn.position.set(x,0.04,z);S.add(bn);});}
-    // the display: clay pressed up against the back, a place made by hand for every single kind of thing
-    this.slots={};this.slotIds=Object.keys(ITEMS).filter(id=>!ITEMS[id].tool&&!ITEMS[id].special);
+    // Empty clay shelves; new kinds fill them from one end in placement order.
+    this.slots=[];this.displayedIds=new Set();
     {const TI2=[[1.6,1.8,0.2],[1.8,2.0,0.4],[2.0,2.2,0.6],[2.2,2.42,0.8]];const ARC=1.08;this.shelfArc=ARC;
       const pr=[new THREE.Vector2(1.6,0)];TI2.forEach(([a,b,y])=>{pr.push(new THREE.Vector2(a,y));pr.push(new THREE.Vector2(b,y));});pr.push(new THREE.Vector2(2.6,0.8));pr.push(new THREE.Vector2(2.6,0));
       const clay=TM({color:0xd7ac74,roughness:1,side:THREE.DoubleSide});
@@ -1750,13 +1747,10 @@ const Hut={
       // thumb-pressed lumps along every edge and at both ends, so it reads as made by hand
       TI2.forEach(([a,b,y],ti)=>{for(let k=0;k<11;k++){const ph=Math.PI-ARC+ARC*2*(k+rr(0.2,0.8))/11;const lp=sph(rr(0.03,0.045),0xc89a62,{roughness:1},7,5);lp.scale.y=0.55;lp.position.set(Math.sin(ph)*(a+0.012),y-0.012,Math.cos(ph)*(a+0.012));lp.castShadow=false;S.add(lp);}
         [-1,1].forEach(e=>{const ph=Math.PI+e*ARC;const en=sph(0.16,0xba8248,{roughness:1},9,7);en.scale.set(1,0.9,1);en.position.set(Math.sin(ph)*(a+b)/2,y-0.06,Math.cos(ph)*(a+b)/2);S.add(en);});});
-      const dent=new THREE.MeshBasicMaterial({color:0xf0d6a4});const rimM=new THREE.MeshBasicMaterial({color:0x3a2210});const press=new THREE.MeshBasicMaterial({color:0x9a6a3c});
-      this.slotIds.forEach((id,n)=>{const ti=Math.floor(n/11),col=n%11;const [a,b,y]=TI2[Math.min(3,ti)];const rc=(a+b)/2;const ph=Math.PI-ARC*0.9+(col+0.5)/11*ARC*1.8;
+      const capacity=Object.values(ITEMS).filter(it=>!it.tool&&!it.special).length;
+      for(let n=0;n<capacity;n++){const ti=Math.floor(n/11),col=n%11;const [a,b,y]=TI2[Math.min(3,ti)];const rc=(a+b)/2;const ph=Math.PI-ARC*0.9+(col+0.5)/11*ARC*1.8;
         const x=Math.sin(ph)*rc,z=Math.cos(ph)*rc;
-        const d=new THREE.Mesh(new THREE.CircleGeometry(0.092,16),dent);d.rotation.x=-Math.PI/2;d.position.set(x,y+0.005,z);d.userData.noInk=true;S.add(d);const rg=new THREE.Mesh(new THREE.RingGeometry(0.092,0.106,18),rimM);rg.rotation.x=-Math.PI/2;rg.position.set(x,y+0.006,z);rg.userData.noInk=true;S.add(rg);
-        // the shape of the thing pressed into the clay, waiting for it
-        const im=fitObject(makeItemMesh(id),0.14);im.traverse(o=>{if(o.isMesh){o.material=press;o.castShadow=false;o.receiveShadow=false;o.userData.noInk=true;}});im.rotation.y=ph;const hold=new THREE.Group();hold.add(im);hold.scale.y=0.04;hold.position.set(x,y+0.01,z);S.add(hold);
-        this.slots[id]={x,y,z,ph,filled:false,imprint:hold};});}
+        this.slots.push({x,y,z,ph});}}
     // door
     const df=new THREE.Group();[-0.62,0.62].forEach(x=>{const p=cyl(0.07,0.08,1.4,0x7a5a32,{},7);p.position.set(x,0.7,this.R+0.02);df.add(p);});const lin=cyl(0.07,0.07,1.45,0x7a5a32,{},7);lin.rotation.z=Math.PI/2;lin.position.set(0,1.38,this.R+0.02);df.add(lin);S.add(df);
     const dl=new THREE.Mesh(new THREE.PlaneGeometry(1.15,1.32),new THREE.MeshBasicMaterial({color:0xe8f6ff}));dl.position.set(0,0.66,this.R+0.06);dl.rotation.y=Math.PI;S.add(dl);this.doorLight=dl;
@@ -1768,6 +1762,7 @@ const Hut={
     for(let i=this.drops.length-1;i>=0;i--){const d=this.drops[i];d.t+=dt;const k=Math.min(1,d.t/0.35);d.mesh.position.y=(d.base||0)+d.y0*(1-k)+Math.abs(Math.sin(k*Math.PI*2))*0.05*(1-k);if(k>=1){d.mesh.position.y=d.base||0;this.drops.splice(i,1);}}
   },
   inShelf(px,pz){return pz<0&&Math.abs(Math.atan2(px,-pz))<this.shelfArc+0.12;},
+  nearShelf(px,pz){const r=Math.hypot(px,pz);return r>=1.15&&r<=1.5&&pz<0&&Math.abs(Math.atan2(px,-pz))<=this.shelfArc;},
   okSpot(px,pz,gap){const r=Math.hypot(px,pz);if(r>this.R-0.3||r<0.9)return false;if(this.inShelf(px,pz)&&r>1.38)return false;if(px<-0.85&&pz>0.3&&pz<1.7)return false;if(px>1.2&&pz>0.45&&pz<1.35)return false;if(Math.abs(px)<0.7&&pz>1.7)return false;
     for(const it of this.items)if(!it.slot&&Math.hypot(it.x-px,it.z-pz)<gap)return false;return true;},
   freeSpot(x,z){
@@ -1786,13 +1781,14 @@ const Hut={
     if(animate)this.drops.push({mesh:holder,t:0,y0:0.6});
     return it;
   },
-  // first one of its kind goes to its own place; anything after that just gets left on the floor
+  // One of each kind, packed from the shelf's end; duplicates stay on the floor.
   placeSlot(id){
-    const sl=this.slots[id];if(!sl||sl.filled)return false;
+    const item=ITEMS[id];if(!item||item.tool||item.special||this.displayedIds.has(id))return false;
+    const sl=this.slots[this.displayedIds.size];if(!sl)return false;
     const m=fitObject(makeItemMesh(id),0.2);m.userData.itemId=id;const bb=new THREE.Box3().setFromObject(m);
     const holder=new THREE.Group();holder.add(m);m.position.y-=bb.min.y;holder.position.set(sl.x,sl.y+0.5,sl.z);holder.rotation.y=sl.ph+Math.PI;holder.userData.itemId=id;
     this.itemsGroup.add(holder);this.items.push({id,x:sl.x,z:sl.z,mesh:holder,slot:true});G.placed.push({id,x:sl.x,z:sl.z});
-    sl.filled=true;sl.imprint.visible=false;this.drops.push({mesh:holder,t:0,y0:0.5,base:sl.y+0.004});return true;
+    this.displayedIds.add(id);this.drops.push({mesh:holder,t:0,y0:0.5,base:sl.y+0.004});return true;
   },
   pick(raycaster){
     const hits=raycaster.intersectObjects(this.itemsGroup.children,true);
@@ -2418,7 +2414,6 @@ const Game={
   init(){
     G.touch=!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches);
     renderIcons();
-    {const ids=shuffle(Object.keys(ITEMS).filter(k=>ITEMS[k].band!==undefined)).slice(0,7);$('tfinds').innerHTML=ids.map((id,i)=>`<img src="${ITEMS[id].icon}" style="transform:rotate(${(i%2?1:-1)*(3+i)}deg)" alt="">`).join('');}
     Surface.init();Hut.init();Inner.init();View.init();Input.init();
     this.playerModel=makePerson({hairStyle:'lines',pouch:true,skin:PLAYER_SKIN,hair:0x1a1a1a,top:PLAYER_TOP,bottom:0x7f5a36,ageLines:true});
     this.playerModel.root.visible=false;SURF.scene.add(this.playerModel.root);
@@ -2461,7 +2456,7 @@ const Game={
     const st=G.state;
     if(st==='surface'&&P.pos.y<-0.4)this.startClimb();
     else if(st==='surface'&&this.nearCard){G.cardRead=true;P.vel.set(0,0,0);UI.inspect('postcard');}
-    else if(st==='hut'&&G.pouch.length)this.placeItem();
+    else if(this.canPlaceItem())this.placeItem();
   },
   nearPit(){return Math.hypot(P.pos.x-Surface.pitPos.x,P.pos.z-Surface.pitPos.z)<1.75;},
   onTap(x,y){if(UI.inspOpen)return;this.pickAt(new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
@@ -2526,7 +2521,6 @@ const Game={
   },
   // every dig counts as time passing up there; the world is swapped while your head is down
   afterDig(){
-    if(!G.started1){G.started1=true;UI.hint('내면 탐구하기',2600);}
     G.maxDepth=Math.max(G.maxDepth,-Terrain.deepY);
     if(G.era>=1&&G.digs%32===0)Inner.spawnLitter(G.era);
     const want=Math.max(G.maxEra,eraForDepth(-Terrain.deepY),eraForDigs(G.digs));
@@ -2564,11 +2558,12 @@ const Game={
     const moved=Math.hypot(P.pos.x-before.x,P.pos.z-before.z);
     View.walk=lerp(View.walk,w.moving?clamp(moved/dt/2,0,1):0,1-Math.pow(0.002,dt));
     this.stepAcc+=moved;if(this.stepAcc>0.6){this.stepAcc=0;AU.step('hut');}
-    UI.act(G.pouch.length?'놓기':null,'E');
+    UI.act(this.canPlaceItem()?'놓기':null,'E');
     Hut.update(dt,t);this.camFollow(dt);
   },
+  canPlaceItem(){return G.state==='hut'&&G.pouch.length>0&&Hut.nearShelf(P.pos.x,P.pos.z);},
   placeItem(){
-    if(!G.pouch.length)return;
+    if(!this.canPlaceItem())return;
     const id=G.pouch[0];
     if(Hut.placeSlot(id)){G.pouch.shift();UI.pouch();AU.place();View.place();if(G.placed.length===1)UI.hint(G.touch?'놓은 물건을 누르면 돌려 볼 수 있습니다':'놓은 물건을 클릭하면 돌려 볼 수 있습니다',5000);return;}
     const dir=viewDir();const eye=new THREE.Vector3(P.pos.x,P.camY,P.pos.z);
@@ -2804,3 +2799,4 @@ Game.init();
 </script>
 </body>
 </html>
+
