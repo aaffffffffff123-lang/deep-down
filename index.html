@@ -7,6 +7,21 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <title>침잠하기</title>
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="침잠하기">
+<meta property="og:url" content="https://aaffffffffff123-lang.github.io/deep-down/">
+<meta property="og:image" content="https://aaffffffffff123-lang.github.io/deep-down/og-preview-v1.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="움집 앞 흙바닥에 놓인 돌멩이와 나뭇가지">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="침잠하기">
+<meta name="twitter:image" content="https://aaffffffffff123-lang.github.io/deep-down/og-preview-v1.jpg">
+<meta name="twitter:image:alt" content="움집 앞 흙바닥에 놓인 돌멩이와 나뭇가지">
 <style>
   :root{
     --cream:#fff6e4; --cream2:#ffe9c2; --brown:#5a3d1e; --brown2:#8a6238; --line:#e3c48f;
@@ -363,19 +378,16 @@ VIEW.sun.position.set(-1.5,3,2.5);
 const POUCH=5;
 const PCX=0.6,PCZ=0.5;   // centre of the diggable front yard
 const STRATA=[
-  {name:'표토',  top:0,     bot:-0.24, tool:0, col:0x8a5a33, col2:0xa06c40},
-  {name:'점토',  top:-0.24, bot:-0.56, tool:1, col:0xd99647, col2:0xeab062},
-  {name:'자갈',  top:-0.56, bot:-0.96, tool:2, col:0xb9a07a, col2:0xd2bb92},
-  {name:'사암',  top:-0.96, bot:-1.28, tool:3, col:0xcf6e45, col2:0xe2875a},
-  {name:'석회암',top:-1.28, bot:-1.68, tool:3, col:0xc9c2ae, col2:0xe0dac8},
-  {name:'암반',  top:-1.68, bot:-9,    tool:9, col:0x4f4c57, col2:0x5f5c68},
+  {name:'표토',  top:0,     bot:-0.48, tool:0, col:0x8a5a33, col2:0xa06c40},
+  {name:'점토',  top:-0.48, bot:-1.14, tool:1, col:0xd99647, col2:0xeab062},
+  {name:'자갈',  top:-1.14, bot:-1.92, tool:2, col:0xb9a07a, col2:0xd2bb92},
+  {name:'사암',  top:-1.92, bot:-2.76, tool:3, col:0xcf6e45, col2:0xe2875a},
+  {name:'석회암',top:-2.76, bot:-3.72, tool:3, col:0xc9c2ae, col2:0xe0dac8},
+  {name:'암반',  top:-3.72, bot:-9,    tool:9, col:0x4f4c57, col2:0x5f5c68},
 ];
-const TOOL_FLOOR=[-0.24,-0.56,-0.96,-1.68];
 const TOOL_NAMES=['맨손','나뭇가지','뾰족한 돌','돌곡괭이'];
-const ERA_DEPTH=[0.2,0.4,0.62,0.85,1.05,1.25,1.42,1.58,999];
-const ERA_DIGS=[40,85,135,190,250,315,385,460];
+const ERA_DIGS=[24,48,76,108,142,176,208,228];
 function eraForDigs(n){let e=0;for(let i=0;i<ERA_DIGS.length;i++)if(n>=ERA_DIGS[i])e=i+1;return e;}
-function eraForDepth(d){for(let i=0;i<ERA_DEPTH.length;i++)if(d<ERA_DEPTH[i])return i;return 8;}
 
 // ---------- game state ----------
 const G={
@@ -1016,7 +1028,7 @@ const ITEMS={
   // tools
   stick:    {name:'나뭇가지',tool:1,mk:makeStick,d:'점토층을 팔 수 있다.'},
   stonetool:{name:'뾰족한 돌',tool:2,mk:makeStoneTool,d:'자갈층을 팔 수 있다.'},
-  pickaxe:  {name:'돌곡괭이',tool:3,mk:makePickaxe,d:'돌에 나뭇가지를 묶었다. 여기까지다.'},
+  pickaxe:  {name:'돌곡괭이',tool:3,mk:makePickaxe,d:'사암과 석회암을 팔 수 있다.'},
 };
 const RARE_LABEL={1:'흔함',2:'드묾',3:'희귀'};
 const LITTER_BY_ERA={1:['potshard','fishbone'],2:['coinold','porcelain'],3:['butt','nail','glassbit'],4:['capwhite','snackchoco','strawblue'],5:['part','chip'],6:['part','chip'],7:['chip','part'],8:['chip']};
@@ -1798,7 +1810,7 @@ const Hut={
 
 // ---------- voxel terrain (surface nets) ----------
 const VS=0.06;
-const TG={x0:PCX-2.1,z0:PCZ-2.1,y0:-2.04,y1:0.36};
+const TG={x0:PCX-2.1,z0:PCZ-2.1,y0:STRATA[4].bot-0.36,y1:0.36};
 const TNX=71,TNZ=71,TNY=Math.round((TG.y1-TG.y0)/VS)+1;
 const TF=new Float32Array(TNX*TNY*TNZ);
 const TI=(i,j,k)=>i+TNX*(j+TNY*k);
@@ -1881,6 +1893,7 @@ const Terrain={
   },
   // one dig = a wide, very shallow scoop where you hit (lots of work, little depth)
   carveDisc(p,n,rad,depth,tool){
+    this.lastCarveChanged=false;
     const gi=GATE_IDX[tool];const m=rad+0.3;
     const i0=Math.max(0,Math.floor((p.x-m-TG.x0)/VS)),i1=Math.min(TNX-1,Math.ceil((p.x+m-TG.x0)/VS));
     const j0=Math.max(0,Math.floor((p.y-m-TG.y0)/VS)),j1=Math.min(TNY-1,Math.ceil((p.y+m-TG.y0)/VS));
@@ -1896,6 +1909,7 @@ const Terrain={
       const cv=Math.max(ds,(rh-R_DIG)/VS,(bnd(4,x,z)-y)/VS,(bnd(gi,x,z)-y)/VS);
       if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(rh<R_DIG&&y<this.deepY)this.deepY=y;}}
     }
+    this.lastCarveChanged=changed;
     if(changed)this.markDirty(i0,i1,j0,j1,k0,k1);
     return removed;
   },
@@ -1951,7 +1965,7 @@ const Terrain={
     out.copy(S[0]).lerp(S[1],n);
     const band=Math.sin(y*70+vnoise2(x*5,z*5)*2.5)*0.5+0.5;out.multiplyScalar(0.9+band*0.14);
     if(si<5){const bd=y-bnd(si,x,z);if(bd<0.02)out.multiplyScalar(0.8+bd*10);}
-    const dk=smoothstep(0.2,1.7,-y);out.multiplyScalar(lerp(1.0,0.72,dk));
+    const dk=smoothstep(0.2,-STRATA[4].bot,-y);out.multiplyScalar(lerp(1.0,0.72,dk));
     out.multiplyScalar(ny>0.45?1.06:ny<-0.35?0.76:0.93);
     return out;
   },
@@ -1964,10 +1978,14 @@ const _tc=new THREE.Color();
 const INNER_ITEM_SCALE=1.3;
 const TOOL_R=[0.16,0.18,0.2,0.23];
 const TOOL_T=[0.5,0.44,0.42,0.52];
+const TOOL_SCOOP=[0.018,0.020,0.020,0.022];
 const STR_K=[1,0.92,0.85,0.78,0.72,0];
 const STR_T=[1,1.05,1.1,1.18,1.26,1];
 const RIM_ANCHOR=new THREE.Vector3(0,0.3,4.2);
-const START_POS=new THREE.Vector3(0,-1.72,1.1);
+const TOOL_DEPOSITS=[
+  {id:'stick',x:PCX-0.22,y:-0.28,z:PCZ-0.32,requiredTool:0},
+  {id:'stonetool',x:PCX+0.22,y:-0.94,z:PCZ-0.05,requiredTool:1},
+];
 const _vg=new THREE.Vector3();
 const glintTex=(()=>{const cv=document.createElement('canvas');cv.width=64;cv.height=64;const ctx=cv.getContext('2d');ctx.translate(32,32);
   const g=ctx.createRadialGradient(0,0,0,0,0,30);g.addColorStop(0,'rgba(255,255,230,0.9)');g.addColorStop(1,'rgba(255,255,200,0)');ctx.fillStyle=g;ctx.fillRect(-32,-32,64,64);
@@ -1982,12 +2000,28 @@ const Inner={
     // items
     this.glintMat=new THREE.SpriteMaterial({map:glintTex,transparent:true,depthTest:false,depthWrite:false,opacity:0.9});
     const F=setupFinds();this.pool=[F.b0,F.b1,F.b2];this.poolCd=true;this.poolCap=true;this.nextFind=4;
+    this.buryTools();
     // target ring
     this.ring=new THREE.Mesh(new THREE.RingGeometry(0.82,1,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));this.ring.visible=false;this.ring.renderOrder=4;S.add(this.ring);
     this.light=new THREE.PointLight(0xffe2bc,0,7,0);S.add(this.light);
     this.debrisGeo=new THREE.DodecahedronGeometry(1,0);
   },
-  depthK(y){return smoothstep(0.1,1.6,-y);},
+  buryTools(){
+    for(const deposit of TOOL_DEPOSITS){
+      const pos=V3(deposit.x,deposit.y,deposit.z);const mesh=makeItemMesh(deposit.id);mesh.position.copy(pos);
+      if(deposit.id==='stick'){mesh.rotation.z=0.4;mesh.scale.setScalar(1.25);}
+      const glint=new THREE.Sprite(this.glintMat.clone());glint.material.depthTest=true;glint.position.copy(pos).add(V3(0,0.06,0));glint.visible=false;
+      SURF.scene.add(mesh);SURF.scene.add(glint);
+      this.items.push({id:deposit.id,pos,mesh,glint,state:'buried',tool:true,requiredTool:deposit.requiredTool});
+    }
+  },
+  toolExposed(it){
+    if(G.tool<it.requiredTool)return false;
+    const p=it.pos;if(Terrain.sample(p.x,p.y,p.z)>-0.15)return false;
+    let open=0;for(const [x,y,z] of [[0.06,0,0],[-0.06,0,0],[0,0,0.06],[0,0,-0.06],[0,-0.04,0]])if(Terrain.sample(p.x+x,p.y+y,p.z+z)<0)open++;
+    return open>=4;
+  },
+  depthK(y){return smoothstep(0.1,-STRATA[4].bot,-y);},
   updateTarget(o,d){
     const T=this.target;T.hit=Terrain.ray(o,d,1.9,T);
     const HU=Terrain.hitU;
@@ -2007,17 +2041,16 @@ const Inner={
     if(T.block==='hard'){AU.tink();this.puff(p,0x9a8a7a,2);G.shake=0.25;if(!this.hardT||G.t-this.hardT>6){this.hardT=G.t;UI.hint('여기는 안 파진다. 움집 앞마당 가운데 흙만 파진다.',3200);}return 'hard';}
     if(T.block==='tool'){
       AU.tink();this.puff(p,STRATA[T.si].col2,2);G.shake=0.3;this.tinks++;
-      if(G.tool===0&&T.si===1&&!G.gotStick&&this.tinks>=2){G.gotStick=true;this.releaseTool('stick',p);}
-      else if(G.tool===1&&T.si===2&&!G.gotStone&&this.tinks>=2){G.gotStone=true;G.hasStone=true;this.releaseTool('stonetool',p);}
-      else if(G.tool===2&&T.si>=3&&this.tinks>=2&&!G.sandHint){G.sandHint=true;UI.hint('이 돌로는 안 파진다. 움집에서 돌과 나뭇가지를 묶을 수 있다.',5000);}
+      if(G.tool===2&&T.si>=3&&this.tinks>=2&&!G.sandHint){G.sandHint=true;UI.hint('움집에서 돌과 나뭇가지를 묶을 수 있다.',5000);}
       return 'tool';
     }
     this.tinks=0;
     const r=TOOL_R[G.tool]*STR_K[si];
-    const removed=Terrain.carveDisc(p,T.n,r,0.036*STR_K[si],G.tool);
+    const removed=Terrain.carveDisc(p,T.n,r,TOOL_SCOOP[G.tool]*STR_K[si],G.tool);
+    if(!Terrain.lastCarveChanged){AU.tink();return 'hard';}
     AU.dig(si,G.tool);G.shake=0.35+G.tool*0.12;G.digs++;
     this.burst(p,T.n,d,si,removed);this.maybeFind(p);
-    for(const it of this.items){if(it.state!=='buried')continue;if(it.pos.distanceTo(c)<r+0.2||Terrain.sample(it.pos.x,it.pos.y,it.pos.z)<-0.6)this.release(it,o,d);}
+    for(const it of this.items){if(it.state==='buried'&&it.pos.distanceTo(p)<r+0.35&&this.toolExposed(it))this.release(it,o,d);}
     return 'dig';
   },
   burst(p,n,d,si,removed){
@@ -2037,20 +2070,17 @@ const Inner={
   // something useless turns up every few digs; what it is depends on how far down you are
   maybeFind(p){
     this.sinceFind=(this.sinceFind||0)+1;let id=null;const y=p.y;
-    if(y<-1.6&&this.poolCap){this.poolCap=false;id='capsule';}
-    else if(y<-1.54&&this.poolCd){this.poolCd=false;id='cd';}
-    else if(this.sinceFind>=this.nextFind){let b=y>-0.56?0:y>-1.28?1:2;while(b>=0&&!this.pool[b].length)b--;if(b>=0)id=this.pool[b].pop();else if(this.sinceFind>=this.nextFind+6){const all=Object.keys(ITEMS).filter(k=>ITEMS[k].band!==undefined);id=pick(all);}}
+    const band=y>STRATA[1].bot?0:y>STRATA[3].bot?1:2;
+    if(y<STRATA[4].bot+0.12&&this.poolCap){this.poolCap=false;id='capsule';}
+    else if(y<STRATA[4].bot+0.28&&this.poolCd){this.poolCd=false;id='cd';}
+    else if(this.sinceFind>=this.nextFind){let b=band;while(b>=0&&!this.pool[b].length)b--;if(b>=0)id=this.pool[b].pop();else if(this.sinceFind>=this.nextFind+6){const all=Object.keys(ITEMS).filter(k=>ITEMS[k].band!==undefined&&ITEMS[k].band<=band&&!['cd','capsule'].includes(k));id=pick(all);}}
     if(!id)return;
-    this.sinceFind=0;this.nextFind=9+Math.floor(Math.random()*7);
+    this.sinceFind=0;this.nextFind=8+Math.floor(Math.random()*5);
     const m=makeItemMesh(id);m.scale.multiplyScalar(INNER_ITEM_SCALE);m.position.copy(p);SURF.scene.add(m);
     this.items.push({id,pos:p.clone(),mesh:m,glint:new THREE.Sprite(),state:'pop',t:0,from:p.clone()});AU.pop();
   },
   release(it,o,d){
     it.state='pop';it.t=0;it.from=it.mesh.position.clone();it.mesh.visible=true;it.glint.visible=false;AU.pop();
-  },
-  releaseTool(id,p){
-    const m=makeItemMesh(id);m.scale.setScalar(1.0);m.position.copy(p);SURF.scene.add(m);
-    this.items.push({id,pos:p.clone(),mesh:m,glint:new THREE.Sprite(),state:'pop',t:0,from:p.clone(),tool:true});AU.pop();
   },
   spawnLitter(era){
     let pool=[];for(let e=1;e<=Math.min(era,5);e++)pool=pool.concat(LITTER_BY_ERA[e]);if(!pool.length)return;
@@ -2077,12 +2107,12 @@ const Inner={
     // items
     for(let i=this.items.length-1;i>=0;i--){const it=this.items[i];
       if(it.state==='buried'){const dist=it.pos.distanceTo(P.pos);it.mesh.visible=dist<5;
-        if(dist<4){const v=Terrain.sample(it.pos.x,it.pos.y,it.pos.z);const show=v<2.6;it.glint.visible=show;if(show){const k=1+Math.sin(t*5+i)*0.25;it.glint.scale.set(0.17*k,0.17*k,1);it.glint.material.rotation=t;}}else it.glint.visible=false;}
+        if(dist<4&&G.tool>=it.requiredTool){const v=Terrain.sample(it.pos.x,it.pos.y,it.pos.z);const show=v<1.5;it.glint.visible=show;if(show){const k=1+Math.sin(t*5+i)*0.25;it.glint.scale.set(0.17*k,0.17*k,1);it.glint.material.rotation=t;}}else it.glint.visible=false;}
       else if(it.state==='pop'){it.t+=dt;const k=Math.min(1,it.t/0.42);
         const target=camPos.clone().add(new THREE.Vector3(0,-0.15,-0.55).applyQuaternion(camera.quaternion));
         it.mesh.position.lerpVectors(it.from,target,easeInOut(k));it.mesh.position.y+=Math.sin(k*Math.PI)*0.2;it.mesh.rotation.y+=dt*8;
         if(k>=1){S.remove(it.mesh);dispose(it.mesh);it.glint.visible=false;S.remove(it.glint);this.items.splice(i,1);
-          if(it.tool){const lvl=ITEMS[it.id].tool;G.tool=Math.max(G.tool,lvl);View.setTool(G.tool);AU.pickup();UI.toast(it.id,true);View.flourish();}
+          if(it.tool){const lvl=ITEMS[it.id].tool;G.tool=Math.max(G.tool,lvl);if(it.id==='stick')G.gotStick=true;if(it.id==='stonetool'){G.gotStone=true;G.hasStone=true;}it.glint.material.dispose();View.setTool(G.tool);AU.pickup();UI.toast(it.id,true);View.flourish();}
           else this.collect(it.id,P,false);}}
     }
     for(let i=this.loose.length-1;i>=0;i--){const l=this.loose[i];l.cool-=dt;l.glint.material.rotation=t;
@@ -2119,7 +2149,7 @@ const Inner={
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#bfe6ff';ctx.fillRect(0,0,w,top-3);ctx.fillStyle='#6fb84a';ctx.fillRect(0,top-3,w,3);
     for(let i=0;i<5&&STRATA[i].top>-rows;i++){const s=STRATA[i];ctx.fillStyle='#'+new THREE.Color(s.col).getHexString();const y0=top-s.top*k,y1=top-Math.max(s.bot,-rows)*k;ctx.fillRect(0,y0,w,y1-y0+1);}
-    if(rows>1.68){ctx.fillStyle='#4f4c57';ctx.fillRect(0,top+1.68*k,w,h);}
+    const bed=-STRATA[4].bot;if(rows>bed){ctx.fillStyle='#4f4c57';ctx.fillRect(0,top+bed*k,w,h);}
     const xs=w/(TNX);
     ctx.fillStyle='rgba(28,16,8,0.82)';
     for(let j=TNY-1;j>=0;j--){const y=TG.y0+j*VS;if(y>0)continue;if(y<-rows)break;const py=top-y*k;for(let i=0;i<TNX;i++){if(AIRCNT[i+TNX*j]>0)ctx.fillRect(i*xs,py-VS*k*0.5,xs+0.6,VS*k+0.6);}}
@@ -2500,7 +2530,7 @@ const Game={
     const intended=Math.hypot(P.vel.x,P.vel.z)*dt,actual=Math.hypot(P.pos.x-prev.x,P.pos.z-prev.z);
     if(wasG&&w.moving&&intended>0.003&&actual<intended*0.5){const test=prev.clone();test.x+=P.vel.x*dt*2.2;test.z+=P.vel.z*dt*2.2;test.y+=0.34;if(spheresFree(test)){P.pos.copy(test);P.vel.y=0;}}
     if(!wasG&&P.grounded&&vyBefore<-4)AU.land();
-    if(P.pos.y<-2.3||!Number.isFinite(P.pos.y)){P.pos.copy(this.lastTop);P.vel.set(0,0,0);}
+    if(P.pos.y<TG.y0-0.3||!Number.isFinite(P.pos.y)){P.pos.copy(this.lastTop);P.vel.set(0,0,0);}
     if(P.grounded&&P.pos.y>-0.05)this.lastTop.copy(P.pos);
     const moved=Math.hypot(P.pos.x-prev.x,P.pos.z-prev.z);
     View.walk=lerp(View.walk,w.moving&&P.grounded?clamp(moved/dt/2.6,0,1):0,1-Math.pow(0.002,dt));
@@ -2523,7 +2553,7 @@ const Game={
   afterDig(){
     G.maxDepth=Math.max(G.maxDepth,-Terrain.deepY);
     if(G.era>=1&&G.digs%32===0)Inner.spawnLitter(G.era);
-    const want=Math.max(G.maxEra,eraForDepth(-Terrain.deepY),eraForDigs(G.digs));
+    const want=Math.max(G.maxEra,eraForDigs(G.digs));
     if(want>G.era&&P.pitch<-0.5&&G.digs-(this.lastEraDig||0)>=14){
       this.lastEraDig=G.digs;G.era=G.era+1;G.maxEra=G.era;G.surfacings++;G.age=Math.min(1,G.era/8);
       View.setAge(G.age);setAge(this.playerModel,G.age);P.eye=1.15-0.15*G.age;P.speedK=1-0.25*G.age;
@@ -2588,7 +2618,7 @@ const Game={
     setTimeout(()=>{
       this.sceneKey='hut';P.pos.set(0,0,2.08);P.yaw=0;P.pitch=-0.36;P.camY=P.eye;this.setCam();
       UI.fade(false,0.35);
-      if(G.hasStone&&G.tool<3){G.state='craft';this.craftT=0;View.mode='craft';View.startCraft();AU.craft();}
+      if(G.gotStick&&G.hasStone&&G.sandHint&&G.tool===2){G.state='craft';this.craftT=0;View.mode='craft';View.startCraft();AU.craft();}
       else{G.state='hut';Input.enabled=true;}
     },300);
   },
