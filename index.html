@@ -112,6 +112,10 @@
     text-shadow:0 6px 0 rgba(90,61,30,.12);}
   .card .btn{padding:16px 44px;border:3px solid var(--line);border-radius:40px;background:var(--cream);
     color:var(--brown);font-size:22px;font-weight:800;box-shadow:var(--shadow);cursor:pointer;font-family:inherit;}
+  #newGameBtn{padding:10px 24px;font-size:16px;box-shadow:none;background:transparent;}
+  #newGameBtn[hidden],#saveNote[hidden]{display:none;}
+  #saveNote{max-width:310px;margin:0;font-size:14px;text-align:center;line-height:1.5;}
+  .card .btn:disabled{opacity:.65;cursor:wait;}
   .card .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(90,61,30,.18);}
   .card .hint{font-size:14px;color:var(--brown2);opacity:.9;text-align:center;line-height:1.7;}
   .card.hide{opacity:0;pointer-events:none;}
@@ -218,6 +222,8 @@
     <h1 class="sink"><span>침</span><span>잠</span><span>하</span><span>기</span></h1>
     <div id="tground"></div>
     <button id="startBtn" class="btn">시작</button>
+    <button id="newGameBtn" class="btn" hidden>새로 시작</button>
+    <p id="saveNote" role="status" hidden></p>
     <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 화면으로 이동 · 오른쪽 화면으로 둘러보기</div>
   </div>
   <div id="end" class="card">
@@ -614,6 +620,8 @@ const AU={
 };
 
 // ---------- item models (junk) ----------
+let itemModelSeed=null;
+function itemRandom(){if(itemModelSeed===null)return Math.random();itemModelSeed=(Math.imul(itemModelSeed,1664525)+1013904223)>>>0;return itemModelSeed/4294967296;}
 function M(geo,material){const m=new THREE.Mesh(geo,material);m.castShadow=true;m.receiveShadow=true;return m;}
 function plasticM(c,o={}){return mat(c,Object.assign({roughness:0.34,env:0.35},o));}
 function texM(map,o={}){const m=TM(Object.assign({map,roughness:0.6},o));if(o.metalness>0.2){m.envMap=ENVTEX;m.envMapIntensity=0.8;}return m;}
@@ -686,7 +694,7 @@ function snackBag(kind){
     for(let i=0;i<9;i++)c.fillRect(42,96+i*14,110+((i*41)%60),5);c.fillStyle='#222';for(let i=0;i<30;i++)c.fillRect(70+i*4,250,i%3?2:3,36);
     c.fillStyle='rgba(0,0,0,0.16)';c.fillRect(0,0,w,24);c.fillRect(0,h-24,w,24);});
   const geo=new THREE.PlaneGeometry(0.3,0.4,18,22);
-  const p=geo.attributes.position;const sd=Math.random()*50;
+  const p=geo.attributes.position;const sd=itemRandom()*50;
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);const u=x/0.15,v=y/0.2;
     const bul=0.05*Math.max(0,1-Math.pow(Math.abs(u),3))*Math.max(0,1-Math.pow(Math.abs(v)*1.07,6));
     const cr=vnoise2(x*28+sd,y*28)*0.009+vnoise2(x*64,y*64+sd)*0.004;
@@ -714,7 +722,7 @@ function rubberBand(color){
 }
 function iceStick(){
   const tex=canvasTex(256,64,(c,w,h)=>{c.fillStyle='#ecc995';c.fillRect(0,0,w,h);c.strokeStyle='rgba(150,100,50,0.35)';
-    for(let i=0;i<7;i++){c.lineWidth=1+Math.random();c.beginPath();c.moveTo(0,5+i*9);c.bezierCurveTo(80,10+i*9,170,0+i*9,256,6+i*9);c.stroke();}
+    for(let i=0;i<7;i++){c.lineWidth=1+itemRandom();c.beginPath();c.moveTo(0,5+i*9);c.bezierCurveTo(80,10+i*9,170,0+i*9,256,6+i*9);c.stroke();}
     const gr=c.createLinearGradient(w,0,w*0.45,0);gr.addColorStop(0,'rgba(100,52,26,0.95)');gr.addColorStop(0.8,'rgba(100,52,26,0.25)');gr.addColorStop(1,'rgba(100,52,26,0)');c.fillStyle=gr;c.fillRect(0,0,w,h);});
   const geo=new THREE.CapsuleGeometry(0.022,0.2,4,14);geo.rotateZ(Math.PI/2);
   const uv=geo.attributes.uv,p=geo.attributes.position;for(let i=0;i<uv.count;i++){uv.setXY(i,(p.getX(i)+0.122)/0.244,(p.getY(i)+0.022)/0.044);}
@@ -808,7 +816,7 @@ function battery(){
   const endM=mat(0xbfc4cc,{metalness:0.9,roughness:0.3,env:true});
   g.add(M(new THREE.CylinderGeometry(0.026,0.026,0.1,24,1,false),[texM(tex,{roughness:0.4,metalness:0.3}),endM,endM]));
   const nub=M(new THREE.CylinderGeometry(0.009,0.009,0.008,14),endM);nub.position.y=0.054;g.add(nub);
-  for(let i=0;i<5;i++){const cr=M(new THREE.SphereGeometry(0.005+Math.random()*0.004,6,5),mat(0xf2f0e6,{roughness:1}));const a=Math.random()*6.28;cr.position.set(Math.cos(a)*0.024,-0.05+Math.random()*0.01,Math.sin(a)*0.024);g.add(cr);}
+  for(let i=0;i<5;i++){const cr=M(new THREE.SphereGeometry(0.005+itemRandom()*0.004,6,5),mat(0xf2f0e6,{roughness:1}));const a=itemRandom()*6.28;cr.position.set(Math.cos(a)*0.024,-0.05+itemRandom()*0.01,Math.sin(a)*0.024);g.add(cr);}
   g.rotation.z=Math.PI/2;const w=new THREE.Group();w.add(g);return w;
 }
 function lighter(color){
@@ -924,7 +932,7 @@ function coinOld(){
   const geo=new THREE.ExtrudeGeometry(s,{depth:0.006,bevelEnabled:true,bevelThickness:0.0015,bevelSize:0.0015,bevelSegments:1,curveSegments:24});
   const m=M(geo,mat(0x8a7a44,{metalness:0.6,roughness:0.55,env:0.6}));m.rotation.x=-Math.PI/2;
   const g=new THREE.Group();g.add(m);
-  for(let i=0;i<4;i++){const p=M(new THREE.CircleGeometry(0.008+Math.random()*0.006,8),mat(0x5f8a6a,{roughness:0.9}));const a=Math.random()*6.28,rd=0.025+Math.random()*0.02;p.position.set(Math.cos(a)*rd,0.0078,Math.sin(a)*rd);p.rotation.x=-Math.PI/2;g.add(p);}
+  for(let i=0;i<4;i++){const p=M(new THREE.CircleGeometry(0.008+itemRandom()*0.006,8),mat(0x5f8a6a,{roughness:0.9}));const a=itemRandom()*6.28,rd=0.025+itemRandom()*0.02;p.position.set(Math.cos(a)*rd,0.0078,Math.sin(a)*rd);p.rotation.x=-Math.PI/2;g.add(p);}
   return g;
 }
 function porcelain(){
@@ -1800,7 +1808,9 @@ const PUDDLE_SHADER={
 const Assemblage={
   templates:new Map(),
   component(id){
-    if(!this.templates.has(id)){const g=makeItemMesh(id);g.traverse(o=>{if(o.geometry)o.geometry.userData.assemblageShared=true;});this.templates.set(id,g);}
+    if(!this.templates.has(id)){let h=2166136261;for(const c of id)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;
+      const previous=itemModelSeed;let g;try{itemModelSeed=h;g=makeItemMesh(id);}finally{itemModelSeed=previous;}
+      g.traverse(o=>{if(o.geometry)o.geometry.userData.assemblageShared=true;});this.templates.set(id,g);}
     const g=this.templates.get(id).clone(true),materials=new Map();
     g.traverse(o=>{if(o.isMesh){const clone=m=>{if(!materials.has(m))materials.set(m,m.clone());return materials.get(m);};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);}});return g;
   },
@@ -1934,7 +1944,7 @@ const GATE_IDX=[0,1,2,4];
 function bnd(i,x,z){return STRATA[i].bot+fbm2(x*2.2+i*7.7,z*2.2-i*3.1)*0.035;}
 function stratumIndexAt(x,y,z){for(let i=0;i<5;i++){if(y>bnd(i,x,z))return i;}return 5;}
 const Terrain={
-  chunks:[], group:new THREE.Group(), deepY:0, dirtyCount:0,
+  chunks:[], group:new THREE.Group(), deepY:0, dirtyCount:0, revision:0,
   hitU:{uHit:{value:new THREE.Vector3(0,-999,0)},uHitR:{value:0.25},uHitCol:{value:new THREE.Color(1,1,1)},uHitOn:{value:0}},
   init(){
     this.deepY=0;
@@ -2027,6 +2037,7 @@ const Terrain={
     return removed;
   },
   markDirty(i0,i1,j0,j1,k0,k1){
+    this.revision++;
     const cx0=Math.max(0,Math.floor((i0-2)/TCS)),cx1=Math.min(TCX-1,Math.floor((i1+1)/TCS));
     const cy0=Math.max(0,Math.floor((j0-2)/TCS)),cy1=Math.min(TCY-1,Math.floor((j1+1)/TCS));
     const cz0=Math.max(0,Math.floor((k0-2)/TCS)),cz1=Math.min(TCZ-1,Math.floor((k1+1)/TCS));
@@ -2624,8 +2635,10 @@ const Game={
     Surface.buildEra(0);
     const dx=Surface.pitPos.x-P.pos.x,dz=Surface.pitPos.z-P.pos.z;P.yaw=Math.atan2(-dx,-dz);P.pitch=-0.62;
     UI.pouch();
-    $('startBtn').addEventListener('click',()=>this.start());
-    $('againBtn').addEventListener('click',()=>location.reload());
+    Save.init();
+    $('startBtn').addEventListener('click',()=>this.launch());
+    $('newGameBtn').addEventListener('click',()=>{if(Save.reset()){if(this.restoreFailed)location.reload();else this.start();}});
+    $('againBtn').addEventListener('click',()=>{if(Save.reset())location.reload();});
     $('act').addEventListener('click',()=>{AU.uiTap();this.action();});
     Input.tapCb=(x,y)=>this.onTap(x,y);
     Input.clickCb=(x,y,locked)=>this.onClick(x,y,locked);
@@ -2637,7 +2650,19 @@ const Game={
     this.camFollow(0);
     this.loop();
   },
+  async launch(){
+    if(this.launching)return;
+    if(!Save.saved){if(Save.corrupt&&!Save.reset())return;this.start();return;}
+    this.launching=true;const button=$('startBtn');button.disabled=true;button.textContent='불러오는 중…';$('newGameBtn').disabled=true;
+    AU.init();Input.wantLock=!G.touch;
+    if(!G.touch&&canvas.requestPointerLock){try{const r=canvas.requestPointerLock();if(r?.catch)r.catch(()=>{});}catch(e){}}
+    await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+    try{Save.restore();$('title').classList.add('hide');}
+    catch(e){this.restoreFailed=true;Save.error('저장된 진행 상황을 불러오지 못했어요. 새로고침한 뒤 다시 시도해 주세요.');Input.enabled=false;}
+    finally{button.disabled=false;button.textContent='이어하기';$('newGameBtn').disabled=false;this.launching=false;}
+  },
   start(){
+    Save.active=true;Save.paused=false;
     AU.init();AU.startAmb(0,0.6);
     $('title').classList.add('hide');this.sceneKey='surface';
     Input.wantLock=!G.touch;
@@ -2997,6 +3022,131 @@ const Game={
     requestAnimationFrame(frame);
   },
 };
+// ---------- local continuation ----------
+function encodeTerrain(buffer){
+  const bits=new Uint32Array(buffer);let runs=0,hash=2166136261;
+  for(let i=0;i<bits.length;i++){if(!i||bits[i]!==bits[i-1])runs++;hash=Math.imul(hash^bits[i],16777619)>>>0;}
+  let bytes,codec;
+  if(runs*2<bits.length){const packed=new Uint32Array(runs*2);let n=0;
+    for(let i=0;i<bits.length;){const value=bits[i];let end=i+1;while(end<bits.length&&bits[end]===value)end++;packed[n++]=end-i;packed[n++]=value;i=end;}
+    bytes=new Uint8Array(packed.buffer);codec='rle32';
+  }else{bytes=new Uint8Array(buffer);codec='raw32';}
+  let text='';for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));
+  return {codec,data:btoa(text),hash};
+}
+function decodeTerrain(saved){
+  if(!saved||!['rle32','raw32'].includes(saved.codec)||typeof saved.data!=='string'||saved.data.length>TF.length*6)throw Error('terrain format');
+  const text=atob(saved.data);if(text.length%4||text.length>TF.byteLength)throw Error('terrain size');
+  const bytes=Uint8Array.from(text,c=>c.charCodeAt(0)),words=new Uint32Array(bytes.buffer),out=new Uint32Array(TF.length);
+  if(saved.codec==='raw32'){if(words.length!==out.length)throw Error('terrain length');out.set(words);}
+  else{if(words.length%2)throw Error('terrain runs');let n=0;for(let i=0;i<words.length;i+=2){const count=words[i];if(!count||n+count>out.length)throw Error('terrain run');out.fill(words[i+1],n,n+count);n+=count;}if(n!==out.length)throw Error('terrain length');}
+  let hash=2166136261;const field=new Float32Array(out.buffer);
+  for(let i=0;i<out.length;i++){if(!Number.isFinite(field[i])||Math.abs(field[i])>DMAX+0.001)throw Error('terrain value');hash=Math.imul(hash^out[i],16777619)>>>0;}
+  if(hash!==saved.hash)throw Error('terrain checksum');return field;
+}
+const Save={
+  key:'chimjam.continue.v1',active:false,paused:false,saved:null,corrupt:false,worker:null,busy:null,token:0,cache:null,cacheRevision:-1,lastState:'',failure:false,
+  writer:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),
+  numbers:['era','maxEra','surfacings','descents','maxDepth','tool','digs'],
+  flags:['hasStone','gotStick','gotStone','bedrockHit','crafted','sandHint','cardRead'],
+  init(){
+    this.read();
+    try{const url=URL.createObjectURL(new Blob([`onmessage=e=>{try{postMessage({token:e.data.token,terrain:(${encodeTerrain.toString()})(e.data.buffer)});}catch(err){postMessage({token:e.data.token,error:true});}}`],{type:'text/javascript'}));
+      try{this.worker=new Worker(url);}finally{URL.revokeObjectURL(url);}
+      this.worker.onmessage=e=>{const p=this.busy;if(!p||e.data.token!==p.token)return;this.busy=null;if(e.data.error){this.worker.terminate();this.worker=null;this.flush(true);return;}this.cache=e.data.terrain;this.cacheRevision=p.revision;this.commit(p.state,p.text,e.data.terrain);};
+      this.worker.onerror=()=>{this.worker?.terminate();this.worker=null;this.busy=null;this.flush(true);};
+    }catch(e){this.worker=null;}
+    this.timer=setInterval(()=>this.flush(),3000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')this.flush(true);});
+    window.addEventListener('pagehide',()=>this.flush(true));
+    window.addEventListener('storage',e=>{if(e.key!==this.key)return;
+      if(this.active){this.paused=true;this.busy=null;this.token++;this.error('다른 탭에서 진행 상황이 바뀌어 이 탭의 자동 저장을 멈췄어요.');}
+      else this.read();});
+  },
+  error(message){$('saveNote').hidden=false;$('saveNote').textContent=message;if(this.active&&!this.failure)UI.hint(message,8000);this.failure=true;},
+  read(){
+    this.saved=null;this.corrupt=false;this.storageUnavailable=false;let raw=null;
+    try{raw=localStorage.getItem(this.key);}catch(e){this.storageUnavailable=true;this.error('이 브라우저에서는 자동 저장을 사용할 수 없어요.');}
+    if(raw)try{const saved=JSON.parse(raw);this.validate(saved);saved.field=decodeTerrain(saved.terrain);this.saved=saved;}
+    catch(e){this.corrupt=true;this.error('저장된 진행 상황을 읽지 못했어요.');}
+    $('startBtn').textContent=this.saved?'이어하기':this.corrupt?'새로 시작':'시작';$('newGameBtn').hidden=!this.saved;
+  },
+  validate(s){
+    const ok=v=>{if(!v)throw Error('invalid save');},num=(n,a,b)=>typeof n==='number'&&Number.isFinite(n)&&n>=a&&n<=b;
+    const vec=(v,n=3,limit=100)=>Array.isArray(v)&&v.length===n&&v.every(x=>num(x,-limit,limit));
+    const id=x=>typeof x==='string'&&Object.hasOwn(ITEMS,x),junk=x=>id(x)&&!ITEMS[x].tool&&!ITEMS[x].special;
+    const list=(a,test,max=10000)=>Array.isArray(a)&&a.length<=max&&a.every(test);
+    ok(s?.version===1&&s.grid===`${TNX},${TNY},${TNZ},${VS},${TG.y0}`);const d=s.state,g=d?.g,pl=d?.player,inn=d?.inner;
+    ok(g&&pl&&inn);this.numbers.forEach(k=>ok(num(g[k],0,k==='tool'?3:k==='era'||k==='maxEra'?9:k==='maxDepth'?10:1e9)));
+    ['era','maxEra','tool','digs','surfacings','descents'].forEach(k=>ok(Number.isInteger(g[k])));ok(g.maxEra>=g.era);
+    this.flags.forEach(k=>ok(typeof g[k]==='boolean'));ok(list(g.pouch,junk,POUCH)&&g.got&&typeof g.got==='object'&&!Array.isArray(g.got));Object.entries(g.got).forEach(([k,v])=>ok(junk(k)&&typeof v==='boolean'));
+    ok(['surface','hut'].includes(pl.scene)&&vec(pl.pos)&&num(pl.pos[1],TG.y0-0.5,10)&&num(pl.yaw,-1e8,1e8)&&num(pl.pitch,-1.6,1.6)&&typeof pl.crafting==='boolean');
+    ok(vec(d.lastTop)&&num(d.lastEraDig,0,g.digs)&&typeof d.card==='boolean');
+    let count=0;const orders=new Set(),origin=o=>{ok(o&&junk(o.id)&&num(o.x,-3,3)&&num(o.z,-3,3)&&typeof o.slot==='boolean'&&Number.isInteger(o.order)&&o.order>=0&&!orders.has(o.order));orders.add(o.order);};
+    ok(list(d.hut,it=>{origin(it);ok(num(it.rotation,-1e8,1e8));ok(list(it.parts,(p,i)=>{count++;ok(junk(p.id)&&vec(p.p,3,5000)&&vec(p.q,4,1.01)&&Math.abs(Math.hypot(...p.q)-1)<0.01);if(i){origin(p.origin);ok(p.origin.id===p.id);}else ok(p.id===it.id);return true;})&&it.parts.length>0);return true;}));ok(count<=50000&&d.hut.filter(it=>it.slot).length<=Hut.slots.length);
+    ok(list(inn.pool,a=>list(a,junk,44),3)&&inn.pool.length===3&&typeof inn.poolCd==='boolean'&&typeof inn.poolCap==='boolean');
+    ['sinceFind','nextFind','tinks'].forEach(k=>ok(num(inn[k],0,1e9)));
+    ok(list(inn.items,it=>id(it.id)&&['buried','pop'].includes(it.state)&&vec(it.pos)&&typeof it.tool==='boolean'&&(it.tool?['stick','stonetool'].includes(it.id)&&num(it.requiredTool,0,1):junk(it.id)&&it.state==='pop')));
+    ok(list(inn.loose,it=>junk(it.id)&&vec(it.pos)&&typeof it.litter==='boolean')&&list(inn.falling,junk));
+  },
+  capture(){
+    if(!['surface','hut','craft','climb','toHut','toSurface','intro'].includes(G.state))return null;
+    const g={};[...this.numbers,...this.flags].forEach(k=>g[k]=G[k]);g.pouch=G.pouch.slice();g.got={...G.got};
+    const origin=it=>({id:it.id,x:it.x,z:it.z,slot:!!it.slot,order:it.order});
+    const pos=Game.tr?.kind==='climb'?Game.tr.to:P.pos;
+    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:!!Game.card,
+      hut:Hut.items.map(it=>({...origin(it),rotation:it.mesh.rotation.y,parts:Assemblage.parts(it).map(p=>({id:p.id,p:p.p.slice(),q:p.q.slice(),...(p.origin?{origin:{...p.origin}}:{})}))})),
+      inner:{pool:Inner.pool.map(p=>p.slice()),poolCd:Inner.poolCd,poolCap:Inner.poolCap,sinceFind:Inner.sinceFind||0,nextFind:Inner.nextFind,tinks:Inner.tinks,
+        items:Inner.items.map(it=>({id:it.id,pos:it.pos.toArray(),state:it.state,tool:!!it.tool,requiredTool:it.requiredTool||0})),
+        loose:[...Inner.loose.map(it=>({id:it.id,pos:it.pos.toArray(),litter:it.litter})),...Inner.falling.filter(f=>f.started).map(f=>({id:f.id,pos:f.end.toArray(),litter:true}))],falling:Inner.falling.filter(f=>!f.started).map(f=>f.id)}};
+  },
+  flush(sync=false){
+    if(!this.active||this.paused||(!sync&&this.busy))return;
+    const state=this.capture();if(!state)return;const text=JSON.stringify(state),revision=Terrain.revision;
+    if(this.cacheRevision===revision&&text===this.lastState)return;
+    if(sync){this.token++;this.busy=null;}
+    if(this.cacheRevision===revision&&this.cache){this.commit(state,text,this.cache);return;}
+    const token=++this.token;
+    if(!sync&&this.worker){const buffer=TF.buffer.slice(0);this.busy={token,state,text,revision};try{this.worker.postMessage({token,buffer},[buffer]);}catch(e){this.worker.terminate();this.worker=null;this.busy=null;this.flush(true);}}
+    else{try{this.cache=encodeTerrain(TF.buffer);this.cacheRevision=revision;this.commit(state,text,this.cache);}catch(e){this.error('진행 상황을 저장하지 못했어요. 브라우저의 저장 공간을 확인해 주세요.');}}
+  },
+  commit(state,text,terrain){
+    if(this.paused||!this.active)return;
+    try{const record={version:1,grid:`${TNX},${TNY},${TNZ},${VS},${TG.y0}`,savedAt:Date.now(),writer:this.writer,state,terrain};this.validate(record);localStorage.setItem(this.key,JSON.stringify(record));this.lastState=text;this.failure=false;this.storageUnavailable=false;$('saveNote').hidden=true;}
+    catch(e){this.error('진행 상황을 저장하지 못했어요. 브라우저의 저장 공간을 확인해 주세요.');}
+  },
+  reset(){
+    if((this.saved||this.corrupt||this.active)&&!confirm('저장된 진행을 지우고 처음부터 시작할까요?'))return false;
+    try{localStorage.removeItem(this.key);}catch(e){if(!this.storageUnavailable){this.error('저장된 진행을 지우지 못했어요.');return false;}}
+    this.active=false;this.paused=false;this.busy=null;this.token++;this.saved=null;this.corrupt=false;this.lastState='';this.cache=null;this.cacheRevision=-1;this.failure=false;$('saveNote').hidden=true;return true;
+  },
+  restore(){
+    const s=this.saved;if(!s)throw Error('no save');this.validate(s);const field=s.field||decodeTerrain(s.terrain),d=s.state,g=d.g;
+    TF.set(field);AIRCNT.fill(0);Terrain.deepY=0;
+    for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++){const y=TG.y0+j*VS;if(y>=0)continue;for(let i=0;i<TNX;i++)if(TF[TI(i,j,k)]<=0){AIRCNT[i+TNX*j]++;if(Math.hypot(TG.x0+i*VS-PCX,TG.z0+k*VS-PCZ)<R_DIG)Terrain.deepY=Math.min(Terrain.deepY,y);}}
+    Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(999);Terrain.revision=0;
+    [...this.numbers,...this.flags].forEach(k=>G[k]=g[k]);G.pouch=g.pouch.slice();G.got={...g.got};G.age=Math.min(1,G.era/8);
+    for(const it of [...Inner.items,...Inner.loose]){SURF.scene.remove(it.mesh);dispose(it.mesh);SURF.scene.remove(it.glint);}Inner.items=[];Inner.loose=[];Inner.falling=[];
+    Inner.pool=d.inner.pool.map(p=>p.slice());['poolCd','poolCap','sinceFind','nextFind','tinks'].forEach(k=>Inner[k]=d.inner[k]);
+    d.inner.items.forEach(saved=>{const pos=V3().fromArray(saved.pos),mesh=makeItemMesh(saved.id);mesh.position.copy(pos);
+      if(saved.id==='stick'){mesh.rotation.z=0.4;mesh.scale.setScalar(1.25);}else if(!saved.tool)mesh.scale.multiplyScalar(INNER_ITEM_SCALE);
+      const glint=new THREE.Sprite(Inner.glintMat.clone());glint.material.depthTest=!!saved.tool;glint.position.copy(pos).add(V3(0,0.06,0));glint.visible=false;SURF.scene.add(mesh);SURF.scene.add(glint);
+      Inner.items.push({...saved,pos,mesh,glint,t:0,from:pos.clone()});});
+    d.inner.loose.forEach(it=>Inner.addLoose(it.id,V3().fromArray(it.pos),it.litter));Inner.falling=d.inner.falling.map(id=>({id,delay:1,t:0,started:false}));
+    Hut.items.forEach(it=>Assemblage.release(it.mesh));Hut.itemsGroup.clear();Hut.items=[];Hut.drops=[];Hut.serial=0;
+    d.hut.forEach(saved=>{const it={id:saved.id,x:saved.x,z:saved.z,slot:saved.slot,order:saved.order,parts:JSON.parse(JSON.stringify(saved.parts)),mesh:new THREE.Group()};it.mesh.rotation.y=saved.rotation;Hut.items.push(it);Hut.itemsGroup.add(it.mesh);Hut.rebuild(it);
+      Hut.serial=Math.max(Hut.serial,it.order+1,...it.parts.filter(p=>p.origin).map(p=>p.origin.order+1));});Hut.reflow();
+    Surface.buildEra(G.era);Game.lastEraDig=d.lastEraDig;Game.lastTop.fromArray(d.lastTop);Game.tr=null;Game.final=false;
+    P.pos.fromArray(d.player.pos);P.yaw=d.player.yaw;P.pitch=d.player.pitch;P.eye=1.15-0.15*G.age;P.speedK=1-0.25*G.age;P.camY=P.pos.y+P.eye;P.vel.set(0,0,0);P.grounded=false;
+    Game.sceneKey=d.player.scene;G.state=d.player.scene;View.setAge(G.age);setAge(Game.playerModel,G.age);View.setTool(G.tool);View.mode='idle';View.swingT=-1;View.visible=true;
+    Input.release();Input.enabled=true;Game.setCam();UI.pouch();UI.showPouch(true);UI.cross(true);UI.digBtn(G.state==='surface');UI.act(null);UI.hint(null);UI.minimap(false);Game.mmOn=false;
+    if(d.card)Game.spawnPostcard();
+    if(d.player.crafting&&G.tool<3){G.state='craft';Game.craftT=0;Input.enabled=false;View.mode='craft';View.startCraft();AU.craft();}
+    AU.startAmb(G.era,0.6);AU.setMuffle(Game.sceneKey==='hut'||P.pos.y<-0.02,Inner.depthK(P.pos.y));
+    this.cache=s.terrain;this.cacheRevision=0;this.lastState='';this.active=true;this.paused=false;this.saved=null;this.flush();
+  },
+};
+
 window.View=View;window.__chimjam={bnd,stratumIndexAt,G,Game,Inner,Surface,Hut,Terrain,View,UI,AU,P,Input,ITEMS,camera,renderer,step:(dt,n)=>{for(let i=0;i<n;i++)Game.tick(dt);}};
 Game.init();
 
