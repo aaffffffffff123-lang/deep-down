@@ -2546,7 +2546,12 @@ const UI={
     if(this.inspObj){this.inspScene.remove(this.inspObj);Assemblage.release(this.inspObj);}
     const g=parts?Assemblage.mesh(parts):makeItemMesh(this.inspId);swapEnv(g,this.inspEnv);
     this.inspAssembly=g;const w=fitObject(g,this.inspItem?0.56:0.78);this.inspScene.add(w);this.inspObj=w;w.rotation.set(this.inspRot.x,this.inspRot.y,0);
-    this.resizeInspect();
+    this.resizeInspect();this.frameInspect();
+  },
+  frameInspect(){
+    const center=new THREE.Vector3();let distance=1.9;
+    if(this.pendingAttach?.g.visible){const sphere=new THREE.Box3().setFromObject(this.inspObj).getBoundingSphere(new THREE.Sphere());center.copy(sphere.center);distance=Math.max(distance,sphere.radius/Math.sin(Math.PI/12)*1.1);}
+    this.inspCam.position.copy(center).add(new THREE.Vector3(0,0.25,distance));this.inspCam.lookAt(center);this.inspCam.updateMatrixWorld();
   },
   resizeInspect(){const cv=$('inspc'),sz=cv.clientWidth;if(sz!==this.inspSize){this.inspSize=sz;this.inspR.setSize(sz,sz,false);}},
   beginAttach(){
@@ -2578,11 +2583,11 @@ const UI={
     let min=Infinity,max=-Infinity;const v=new THREE.Vector3(),walk=(o,m)=>{o.updateMatrix();const next=m.clone().multiply(o.matrix);if(o.isMesh){const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){v.fromBufferAttribute(a,i).applyMatrix4(next);const d=v.dot(p.contact.normal);min=Math.min(min,d);max=Math.max(max,d);}}o.children.forEach(c=>walk(c,next));};
     walk(g,new THREE.Matrix4());if(!Number.isFinite(min))return;
     g.position.copy(p.contact.point).addScaledVector(p.contact.normal,-min-Math.min(0.0025,(max-min)*0.08));g.visible=true;
-    p.pose={p:g.position.toArray(),q:g.quaternion.toArray()};$('attachConfirm').disabled=false;$('attachConfirm').textContent='붙이기';
+    p.pose={p:g.position.toArray(),q:g.quaternion.toArray()};this.frameInspect();$('attachConfirm').disabled=false;$('attachConfirm').textContent='붙이기';
   },
   turnAttach(axis){const p=this.pendingAttach;if(!p)return;p.q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(axis==='x'?1:0,axis==='y'?1:0,0),Math.PI/4));this.positionAttach();},
   closeInspect(){this.cancelAttach();$('insp').classList.remove('show');this.inspOpen=false;Input.release();Input.enabled=this.inspInputEnabled;this.inspItem=null;},
-  inspRender(dt){if(!this.inspOpen||!this.inspObj)return;this.resizeInspect();if(!this.inspDrag&&!this.attachMode)this.inspRot.y+=dt*0.5;this.inspObj.rotation.set(this.inspRot.x,this.inspRot.y,0);this.inspR.render(this.inspScene,this.inspCam);},
+  inspRender(dt){if(!this.inspOpen||!this.inspObj)return;this.resizeInspect();if(!this.inspDrag&&!this.attachMode)this.inspRot.y+=dt*0.5;this.inspObj.rotation.set(this.inspRot.x,this.inspRot.y,0);this.frameInspect();this.inspR.render(this.inspScene,this.inspCam);},
 };
 
 // ---------- player (first person) ----------
