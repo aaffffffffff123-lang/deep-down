@@ -142,22 +142,9 @@
   #attachTray button.selected{border:3px solid var(--brown);background:#e7d4b3;}
   #attachTray img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
   #attachHelp{font-size:14px;text-align:center;}
-  #assembleOpen{position:fixed;right:calc(20px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));min-width:104px;min-height:60px;padding:13px 14px;border:3px solid #1c1009;border-radius:6px;background:#fffdf6;color:#1c1009;box-shadow:4px 4px 0 #1c1009;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;}
-  #assembleOpen[hidden],#assemblyPicker[hidden],#attachHelp[hidden]{display:none;}
-  #assemblyPicker{position:fixed;inset:0;z-index:12;background:rgba(255,253,246,.98);display:flex;flex-direction:column;align-items:center;gap:18px;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));}
-  #assemblyPicker h2{font-size:21px;margin:0;}
-  #assemblyList{width:min(100%,520px);flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));align-content:start;gap:10px;overflow-y:auto;touch-action:pan-y;}
-  #assemblyList button,#assemblyClose{border:2px solid #1c1009;border-radius:6px;background:#fff6e4;color:#1c1009;padding:10px;font-family:inherit;font-weight:700;cursor:pointer;}
-  #assemblyList button{min-height:106px;display:flex;flex-direction:column;align-items:center;gap:5px;}
-  #assemblyList img{width:64px;height:64px;object-fit:contain;pointer-events:none;}
-  #assemblyClose{min-width:130px;min-height:44px;}
   .assemblySteps{display:flex;gap:6px;justify-content:center;font-size:13px;font-weight:700;}
   .assemblySteps span{padding:5px 9px;border:1px solid #d3bc99;border-radius:5px;color:#79674f;background:#f1ead8;}
   .assemblySteps span.active{background:#ffe45c;border:2px solid #1c1009;color:#1c1009;padding:4px 8px;}
-  #assemblyLead,#assemblyEmpty{margin:0;max-width:440px;font-size:15px;line-height:1.55;text-align:center;white-space:pre-line;}
-  #assemblyEmpty{padding:24px 18px;background:#fff0cd;border:2px dashed #b39361;border-radius:8px;}
-  #assemblyPicker{gap:12px;}
-  #assemblyPicker h2{text-align:center;line-height:1.4;}
   #attachGuide{width:min(100%,460px);text-align:center;}
   #attachTitle{margin:9px 0 5px;font-size:20px;line-height:1.3;color:#1c1009;}
   #attachHelp{margin:0;min-height:40px;font-size:14px;line-height:1.45;white-space:pre-line;}
@@ -182,7 +169,7 @@
   #assembleIntro{max-width:420px;font-size:14px;line-height:1.5;text-align:center;white-space:pre-line;margin:0;}
   #assembleBar button{border-radius:6px;border-color:#1c1009;}
   #attachStart{background:#ffe45c !important;}
-  #attachGuide[hidden],#attachSelection[hidden],#attachGesture[hidden],#attachTrayLabel[hidden],#attachPreview[hidden],#assembleIntro[hidden],#assemblyEmpty[hidden],#assemblyList[hidden],#detachLast[hidden]{display:none;}
+  #attachGuide[hidden],#attachSelection[hidden],#attachGesture[hidden],#attachTrayLabel[hidden],#attachPreview[hidden],#assembleIntro[hidden],#detachLast[hidden]{display:none;}
   #insp.assembling{gap:7px;padding:12px 18px;}
   #insp.assembling #inspc{width:min(70vw,300px,26dvh);height:min(70vw,300px,26dvh);}
   #insp.assembling #inspectActions{display:none;}
@@ -262,7 +249,7 @@
   #flipPostcard{margin-top:8px;min-height:48px;padding:12px 28px;border:3px solid #1c1009;border-radius:6px;background:#fffdf6;color:#1c1009;box-shadow:4px 4px 0 #1c1009;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;}
   #flipPostcard[hidden]{display:none;}
   #flipPostcard:active{transform:translateY(2px);box-shadow:2px 2px 0 #1c1009;}
-  /* Keep navigation and inventory at the top; thumb controls share one baseline. */
+  /* Keep navigation and inventory at the top; action controls share one baseline. */
   #pouch{left:auto !important;right:calc(12px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));transform:none !important;gap:5px;padding:6px;border-width:2px !important;box-shadow:2px 3px 0 #1c1009 !important;}
   #pouch .slot{width:34px;height:34px;border-width:2px !important;}
   #pouch .slot img{width:30px;height:30px;}
@@ -279,23 +266,16 @@
   #controls{position:fixed;right:calc(12px + env(safe-area-inset-right));bottom:calc(26px + env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:10px;pointer-events:none;}
   #controls[hidden]{display:none;}
   #controls > button{pointer-events:auto;}
-  #controls #act,#controls #assembleOpen,#controls #dig{position:static !important;left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;transform:none !important;border-width:2px !important;border-radius:8px !important;box-shadow:2px 3px 0 #1c1009 !important;}
-  #controls #act,#controls #assembleOpen{min-width:104px !important;min-height:52px;padding:11px 12px !important;font-size:16px !important;}
+  #controls #act,#controls #dig{position:static !important;left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;transform:none !important;border-width:2px !important;border-radius:8px !important;box-shadow:2px 3px 0 #1c1009 !important;}
+  #controls #act{min-width:104px !important;min-height:52px;padding:11px 12px !important;font-size:16px !important;}
   #controls #dig{width:84px;height:84px;min-width:84px;padding:0;font-size:18px;order:2;}
   #controls #act{order:1;}
-  #controls #assembleOpen{order:1;background:#f1ead8;}
   #controls.hut #act{order:2;background:#ffe9a6 !important;}
-  #controls.hut #act:not(.show){display:block;visibility:hidden;pointer-events:none;}
-  #controls #act:active,#controls #assembleOpen:active,#controls #dig.on{transform:translateY(2px) !important;box-shadow:none !important;}
-  #joy{left:calc(16px + env(safe-area-inset-left)) !important;top:auto !important;bottom:calc(26px + env(safe-area-inset-bottom));transform:none;width:100px;height:100px;border:2px solid rgba(255,253,246,.65);background:rgba(58,38,20,.12);}
-  #joy.ready{display:block;}
-  #joyk{width:42px;height:42px;opacity:.7;border-width:2px;box-shadow:none;}
-  #joy > span{position:absolute;left:0;right:0;bottom:-20px;text-align:center;font-size:12px;color:#fffdf6;text-shadow:0 1px 3px #1c1009;}
-  #insp,#assemblyPicker{z-index:16;background:#fffdf6 !important;}
+  #controls #act:active,#controls #dig.on{transform:translateY(2px) !important;box-shadow:none !important;}
+  #insp{z-index:16;background:#fffdf6 !important;}
   @media (max-width:340px){
-    #joy{left:12px !important;width:88px;height:88px;}
     #controls{gap:8px;}
-    #controls #act,#controls #assembleOpen{min-width:96px !important;}
+    #controls #act{min-width:96px !important;}
     #controls #dig{min-width:78px;width:78px;height:78px;}
   }
 </style>
@@ -309,16 +289,9 @@
   <div id="hint"></div>
   <div id="cross"></div>
   <div id="mm"><canvas id="mmc"></canvas></div>
-  <div id="joy" aria-label="이동 조이스틱"><div id="joyk"></div><span>이동</span></div>
-  <div id="controls"><button id="assembleOpen" hidden>붙이기</button><button id="act"></button><button id="dig">파기</button></div>
+  <div id="joy" aria-hidden="true"><div id="joyk"></div></div>
+  <div id="controls"><button id="act"></button><button id="dig">파기</button></div>
   <div id="fade"></div>
-  <div id="assemblyPicker" hidden role="dialog" aria-modal="true" aria-labelledby="assemblyTitle">
-    <div class="assemblySteps"><span class="active">1 바탕</span><span>2 조각</span><span>3 위치·붙이기</span></div>
-    <h2 id="assemblyTitle">1. 바탕이 될 물건을 고르세요</h2>
-    <p id="assemblyLead">고른 물건 위에 다른 조각을 붙일 거예요.</p>
-    <p id="assemblyEmpty" hidden></p>
-    <div id="assemblyList"></div><button id="assemblyClose">닫기</button>
-  </div>
   <div id="insp">
     <div id="attachGuide" hidden>
       <div class="assemblySteps"><span>1 바탕</span><span id="attachStep2">2 조각</span><span id="attachStep3">3 위치·붙이기</span></div>
@@ -326,7 +299,7 @@
     </div>
     <div id="inspectViewport"><canvas id="inspc"></canvas><span id="attachPreview" hidden>미리보기 · 아직 안 붙였어요</span></div>
     <p id="attachGesture" hidden></p>
-    <div id="attachSelection" hidden><span id="attachBaseName"></span><button id="attachBack">바탕 바꾸기</button></div>
+    <div id="attachSelection" hidden><span id="attachBaseName"></span><button id="attachBack">다른 물건 선택</button></div>
     <div id="inspName"></div>
     <div id="inspRare"></div>
     <div id="inspDesc"></div>
@@ -346,7 +319,7 @@
     <button id="startBtn" class="btn">시작</button>
     <button id="newGameBtn" class="btn" hidden>새로 시작</button>
     <p id="saveNote" role="status" hidden></p>
-    <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 아래로 이동 · 화면을 밀어 둘러보기</div>
+    <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 화면 어디서든 드래그해 이동 · 오른쪽 화면으로 둘러보기</div>
   </div>
   <div id="end" class="card">
     <h1>침잠하기</h1>
@@ -2611,9 +2584,9 @@ const Input={
       if(!this.enabled)return;
       if(isTouch(e)){
         if(!G.touch){G.touch=true;UI.touchMode();}
-        const jr=joy.getBoundingClientRect(),jx=jr.left+jr.width/2,jy=jr.top+jr.height/2;
-        if(Math.hypot(e.clientX-jx,e.clientY-jy)<jr.width*0.7&&this.stickId===null){
-          this.stickId=e.pointerId;this.stickO={x:jx,y:jy};this.moveStick(e.clientX,e.clientY);
+        if(e.clientX<window.innerWidth*0.45&&this.stickId===null){
+          this.stickId=e.pointerId;this.stickO={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};
+          joy.style.display='block';joy.style.left=e.clientX+'px';joy.style.top=e.clientY+'px';knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);
         }else if(this.lookId===null){this.lookId=e.pointerId;this.lookLast={x:e.clientX,y:e.clientY};this.down={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};}
         try{canvas.setPointerCapture(e.pointerId);}catch(err){}
       }else{
@@ -2625,6 +2598,7 @@ const Input={
     canvas.addEventListener('pointermove',e=>{
       if(isTouch(e)){
         if(e.pointerId===this.stickId&&this.stickO){
+          if(Math.hypot(e.clientX-this.stickO.x,e.clientY-this.stickO.y)>10)this.stickO.moved=true;
           this.moveStick(e.clientX,e.clientY);
         }else if(e.pointerId===this.lookId&&this.lookLast){
           this.lookDX+=e.clientX-this.lookLast.x;this.lookDY+=e.clientY-this.lookLast.y;this.lookLast={x:e.clientX,y:e.clientY};
@@ -2638,7 +2612,8 @@ const Input={
     document.addEventListener('mousemove',e=>{if(this.locked&&this.enabled){this.lookDX+=e.movementX;this.lookDY+=e.movementY;}});
     const up=e=>{
       if(isTouch(e)){
-        if(e.pointerId===this.stickId){this.stickId=null;this.stickO=null;knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);}
+        if(e.pointerId===this.stickId){const tap=this.stickO;this.stickId=null;this.stickO=null;joy.style.display='none';knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);
+          if(e.type!=='pointercancel'&&tap&&!tap.moved&&performance.now()-tap.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);}
         if(e.pointerId===this.lookId){this.lookId=null;this.lookLast=null;if(e.type!=='pointercancel'&&this.down&&!this.down.moved&&performance.now()-this.down.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);this.down=null;}
       }else{
         if(e.button===0){this.mouseDig=false;if(this.mdown&&!this.mdown.moved&&performance.now()-this.mdown.t<350&&this.clickCb)this.clickCb(e.clientX,e.clientY,this.locked);this.mdown=null;}
@@ -2650,7 +2625,6 @@ const Input={
     window.addEventListener('keydown',e=>{
       if(e.repeat){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();return;}
       if(UI.inspOpen){if(e.code==='Escape')UI.closeInspect();return;}
-      if(UI.assemblyOpen){if(e.code==='Escape')UI.closeAssemblyPicker();return;}
       this.keys[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(this.keyCb)this.keyCb(e.code);});
     window.addEventListener('keyup',e=>{this.keys[e.code]=false;});
@@ -2662,7 +2636,7 @@ const Input={
     dig.addEventListener('contextmenu',e=>e.preventDefault());
   },
   moveStick(x,y){
-    let dx=x-this.stickO.x,dy=y-this.stickO.y;const R=34,d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d;}
+    let dx=x-this.stickO.x,dy=y-this.stickO.y;const R=50,d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d;}
     $('joyk').style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
     const m=Math.hypot(dx,dy)/R,k=m<0.12?0:Math.min(1,(m-0.12)/0.88);
     if(m>0)this.raw.set(dx/(m*R)*k,dy/(m*R)*k);else this.raw.set(0,0);
@@ -2679,15 +2653,15 @@ const Input={
   },
   consumeLook(){const d={x:this.lookDX,y:this.lookDY};this.lookDX=0;this.lookDY=0;return d;},
   digHeld(){return this.digBtn||this.mouseDig||!!this.keys.KeyF;},
-  release(){this.stickId=null;this.stickO=null;this.lookId=null;this.lookLast=null;$('joyk').style.transform='translate(-50%,-50%)';this.raw.set(0,0);this.move.set(0,0);this.digBtn=false;this.mouseDig=false;$('dig').classList.remove('on');this.lookDX=0;this.lookDY=0;},
+  release(){this.stickId=null;this.stickO=null;this.lookId=null;this.lookLast=null;$('joy').style.display='none';$('joyk').style.transform='translate(-50%,-50%)';this.raw.set(0,0);this.move.set(0,0);this.digBtn=false;this.mouseDig=false;$('dig').classList.remove('on');this.lookDX=0;this.lookDY=0;},
 };
 
 // ---------- UI ----------
 const UI={
   lastPouch:0, hintT:null, toastT:null,
   controls(){
-    const active=['surface','hut'].includes(G.state)&&Input.enabled&&!this.inspOpen&&!this.assemblyOpen;
-    $('controls').hidden=!active;$('controls').classList.toggle('hut',G.state==='hut');$('joy').classList.toggle('ready',active&&G.touch);
+    const active=['surface','hut'].includes(G.state)&&Input.enabled&&!this.inspOpen;
+    $('controls').hidden=!active;$('controls').classList.toggle('hut',G.state==='hut');if(!active)$('joy').style.display='none';
   },
   pouch(pop){
     const el=$('pouch');let html='';
@@ -2719,26 +2693,7 @@ const UI={
     if(!locked&&['surface','hut'].includes(G.state)&&!this.inspOpen)this.hint('화면을 클릭하면 마우스로 둘러볼 수 있습니다',0);
     else if(locked&&$('hint').textContent.startsWith('화면을 클릭')){if(G.state==='surface'&&!G.digs)this.hint('마당 흙을 내려다보고 마우스 왼쪽을 누르고 있으면 팝니다',7000);else this.hint(null);}
   },
-  assemblyOpen:false,
   assemblyName(it){const n=Assemblage.parts(it).length;return ITEMS[it.id].name+(n>1?` + ${n-1}개`:'');},
-  openAssemblyPicker(){
-    if(G.state!=='hut'||this.inspOpen||this.assemblyOpen)return;
-    const singles=Hut.items.filter(it=>Assemblage.parts(it).length===1);
-    const targets=Hut.items.filter(it=>singles.some(other=>other!==it));
-    this.assemblyInputEnabled=Input.enabled;this.assemblyOpen=true;Input.release();Input.enabled=false;P.vel.set(0,0,0);
-    if(document.pointerLockElement)document.exitPointerLock();
-    const list=$('assemblyList');list.replaceChildren();
-    list.hidden=!targets.length;$('assemblyEmpty').hidden=!!targets.length;
-    $('assemblyTitle').textContent=targets.length?'1. 바탕이 될 물건을 고르세요':'붙일 물건을 준비해 주세요';
-    $('assemblyLead').textContent=targets.length?'고른 물건 위에 다른 조각을 붙일 거예요.':'집에 따로 놓인 물건이 있으면 바로 시작할 수 있어요.';
-    $('assemblyEmpty').textContent=Hut.items.length<2?'집에 물건을 두 개 이상 놓아 주세요.\n주머니에 있는 물건은 「놓기」로 꺼낼 수 있어요.':'붙일 낱개 조각이 없어요.\n붙인 물건을 눌러 「마지막 조각 떼기」를 하거나,\n집에 다른 물건을 하나 더 놓아 주세요.';
-    $('assemblyClose').textContent=targets.length?'닫기':'집으로 돌아가기';
-    targets.forEach(it=>{const b=document.createElement('button'),img=document.createElement('img'),label=document.createElement('span');
-      b.type='button';img.src=ITEMS[it.id].icon;img.alt='';label.textContent=this.assemblyName(it);b.append(img,label);
-      b.addEventListener('click',()=>{this.closeAssemblyPicker();this.inspect(it);this.beginAttach();});list.append(b);});
-    $('assemblyPicker').hidden=false;$('assembleOpen').hidden=true;
-  },
-  closeAssemblyPicker(){this.assemblyOpen=false;$('assemblyPicker').hidden=true;Input.release();Input.enabled=this.assemblyInputEnabled;},
   inspOpen:false, inspR:null, inspScene:null, inspCam:null, inspObj:null, inspDrag:null, inspRot:{x:0.35,y:0.4},
   inspect(subject){
     this.inspItem=typeof subject==='string'?null:subject;this.inspId=this.inspItem?this.inspItem.id:subject;
@@ -2761,7 +2716,7 @@ const UI={
       $('flipPostcard').addEventListener('click',()=>this.flipPostcard());
       $('attachStart').addEventListener('click',()=>this.beginAttach());
       $('detachLast').addEventListener('click',()=>{if(Hut.detach(this.inspItem)){AU.place();this.assemblyNotice='마지막 조각을 뗐어요. 집에 다시 놓여 있어요.';this.refreshInspect();}});
-      $('attachBack').addEventListener('click',()=>{this.closeInspect();this.openAssemblyPicker();});
+      $('attachBack').addEventListener('click',()=>{this.closeInspect();this.hint(G.touch?'집에 놓인 다른 물건을 눌러 선택하세요.':'집에 놓인 다른 물건을 클릭해 선택하세요.',4000);});
       $('attachCancel').addEventListener('click',()=>{this.cancelAttach();this.refreshInspect();});
       $('attachTurn').addEventListener('click',()=>this.turnAttach('y'));
       $('attachTilt').addEventListener('click',()=>this.turnAttach('x'));
@@ -2926,8 +2881,6 @@ const Game={
     $('newGameBtn').addEventListener('click',()=>{if(Save.reset()){if(this.restoreFailed)location.reload();else this.start();}});
     $('againBtn').addEventListener('click',()=>{if(Save.reset())location.reload();});
     $('act').addEventListener('click',()=>{AU.uiTap();this.action();});
-    $('assembleOpen').addEventListener('click',()=>{AU.uiTap();UI.openAssemblyPicker();});
-    $('assemblyClose').addEventListener('click',()=>UI.closeAssemblyPicker());
     Input.tapCb=(x,y)=>this.onTap(x,y);
     Input.clickCb=(x,y,locked)=>this.onClick(x,y,locked);
     Input.keyCb=code=>{
@@ -3228,8 +3181,7 @@ const Game={
   tick(dt){
     G.t+=dt;const t=G.t;
     UI.controls();Input.update(dt);
-    $('assembleOpen').hidden=G.state!=='hut'||UI.inspOpen||UI.assemblyOpen;
-    if(UI.inspOpen||UI.assemblyOpen){if(UI.inspOpen)UI.inspRender(dt);if(this.sceneKey==='hut')Hut.update(dt,t);else Surface.update(dt,t);return;}
+    if(UI.inspOpen){UI.inspRender(dt);if(this.sceneKey==='hut')Hut.update(dt,t);else Surface.update(dt,t);return;}
     const st=G.state;
     if(this.tr)this.updateTransition(dt,t);
     else if(st==='surface')this.updateSurface(dt,t);
