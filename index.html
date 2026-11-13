@@ -2142,8 +2142,13 @@ const Hut={
 
 // ---------- voxel terrain (surface nets) ----------
 const VS=0.06;
-const TG={x0:PCX-2.1,z0:PCZ-2.1,y0:STRATA[4].bot-0.36,y1:0.36};
-const TNX=71,TNZ=71,TNY=Math.round((TG.y1-TG.y0)/VS)+1;
+// Keep the old lattice exactly aligned so existing excavations migrate losslessly.
+const OLD_TG={x0:PCX-2.1,z0:PCZ-2.1,y0:STRATA[4].bot-0.36,y1:0.36};
+const OLD_NY=Math.round((OLD_TG.y1-OLD_TG.y0)/VS)+1;
+const GRID_OFFSET={x:96,y:32,z:64};
+const TG={x0:OLD_TG.x0-GRID_OFFSET.x*VS,z0:OLD_TG.z0-GRID_OFFSET.z*VS,y0:OLD_TG.y0-GRID_OFFSET.y*VS,y1:0.36};
+const TNX=279,TNZ=215,TNY=OLD_NY+GRID_OFFSET.y;
+const OLD_GRID_KEY=`71,${OLD_NY},71,${VS},${OLD_TG.y0}`;
 const TF=new Float32Array(TNX*TNY*TNZ);
 const TI=(i,j,k)=>i+TNX*(j+TNY*k);
 const R_DIG=1.9,DMAX=5,TCS=16,TOPY=-0.01;
@@ -2152,18 +2157,50 @@ const AIRCNT=new Int16Array(TNX*TNY);
 const GATE_IDX=[0,1,2,4];
 function bnd(i,x,z){return STRATA[i].bot+fbm2(x*2.2+i*7.7,z*2.2-i*3.1)*0.035;}
 function stratumIndexAt(x,y,z){for(let i=0;i<5;i++){if(y>bnd(i,x,z))return i;}return 5;}
+// These are volumes of removable soil, not ready-made tunnels. Rock between
+// branches and above the ceiling is never removed by a scoop or by cleanup.
+const CaveLayout={
+  ceiling:-2.12,
+  routes:[
+    [[0,-2.95,-1.05,.76],[.35,-3.05,-2.55,.78],[2.15,-3.42,-3.95,.82],[4.35,-3.68,-3.65,.76],[5.95,-3.85,-2.05,.78],[5.75,-3.75,.35,.82],[4.15,-3.35,1.65,.86],[2.35,-3.02,1.15,.72],[1.05,-2.95,.35,.76]],
+    [[-1.05,-2.95,.05,.76],[-2.95,-3.15,.65,.78],[-4.65,-3.35,-.05,.76],[-5.75,-3.48,-1.6,.72],[-5.65,-3.5,-2.8,.67]],
+    [[-2.95,-3.15,.65,.78],[-3.3,-3.72,2.55,.8],[-1.85,-4.35,4.05,.86],[.15,-4.42,4.4,.75]],
+    [[4.35,-3.68,-3.65,.76],[5.45,-4.1,-4.45,.64]],
+    [[-5.65,-3.5,-2.8,.38],[-5.65,-3.5,-3.65,.38]],
+  ],
+  // The pocket is only large enough for one reclining figure. Its shell cannot
+  // be widened, and the narrow approach lets the player look in from outside.
+  pocket:{x:PCX-5.65,y:-3.55,z:PCZ-4.22,rx:.98,ry:.52,rz:1.0},
+  segments:null,
+  prepare(){if(this.segments)return;this.segments=[];
+    for(const route of this.routes)for(let i=1;i<route.length;i++){
+      const a=route[i-1],b=route[i],dx=b[0]-a[0],dy=(b[1]-a[1])/1.23,dz=b[2]-a[2];
+      this.segments.push({x:PCX+a[0],y:a[1],z:PCZ+a[2],dx,dy,dz,l2:dx*dx+dy*dy+dz*dz,r:a[3],dr:b[3]-a[3],
+        x0:PCX+Math.min(a[0],b[0])-1.1,x1:PCX+Math.max(a[0],b[0])+1.1,z0:PCZ+Math.min(a[2],b[2])-1.1,z1:PCZ+Math.max(a[2],b[2])+1.1});
+    }
+  },
+  pocketDistance(x,y,z){const c=this.pocket;return (Math.hypot((x-c.x)/c.rx,(y-c.y)/c.ry,(z-c.z)/c.rz)-1)*Math.min(c.rx,c.ry,c.rz);},
+  distance(x,y,z){
+    if(y>this.ceiling+.4)return 1;
+    this.prepare();let d=2;
+    for(const a of this.segments){if(x<a.x0||x>a.x1||z<a.z0||z>a.z1)continue;
+      const vx=x-a.x,vy=(y-a.y)/1.23,vz=z-a.z;
+      const t=clamp((vx*a.dx+vy*a.dy+vz*a.dz)/a.l2,0,1);
+      d=Math.min(d,Math.hypot(vx-a.dx*t,vy-a.dy*t,vz-a.dz*t)-a.r-a.dr*t);
+    }
+    d=Math.min(d,this.pocketDistance(x,y,z));
+    return Math.max(d,y-this.ceiling);
+  },
+  limit(x,y,z){
+    const shaft=Math.max(Math.hypot(x-PCX,z-PCZ)-R_DIG,bnd(4,x,z)-y);
+    return Math.min(shaft,this.distance(x,y,z));
+  },
+};
 const Terrain={
   chunks:[], group:new THREE.Group(), deepY:0, dirtyCount:0, revision:0,
   hitU:{uHit:{value:new THREE.Vector3(0,-999,0)},uHitR:{value:0.25},uHitCol:{value:new THREE.Color(1,1,1)},uHitOn:{value:0}},
   init(){
-    this.deepY=0;
-    for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++)for(let i=0;i<TNX;i++){
-      const x=TG.x0+i*VS,y=TG.y0+j*VS,z=TG.z0+k*VS;
-      const r=Math.hypot(x-PCX,z-PCZ);
-      const d=(TOPY-y)/VS;
-      const v=clamp(d,-DMAX,DMAX);TF[TI(i,j,k)]=v;
-      if(v<=0&&y<0){AIRCNT[i+TNX*j]++;if(r<R_DIG&&y<this.deepY)this.deepY=y;}
-    }
+    this.resetField();
     this.mat=TM({vertexColors:true,roughness:0.95,metalness:0});
     const det=document.createElement('canvas');det.width=det.height=256;const c=det.getContext('2d');
     c.fillStyle='rgb(235,235,235)';c.fillRect(0,0,256,256);
@@ -2182,7 +2219,22 @@ const Terrain={
         .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n{float dd=distance(vWP,uHit);float bw=0.004+0.045*uHitR;float band=smoothstep(uHitR-bw*1.7,uHitR-bw*0.6,dd)*(1.0-smoothstep(uHitR,uHitR+bw*0.5,dd))*uHitOn;diffuseColor.rgb=mix(diffuseColor.rgb,uHitCol,band*0.6);totalEmissiveRadiance+=uHitCol*band*0.3;}');
     };
     for(let cz=0;cz<TCZ;cz++)for(let cy=0;cy<TCY;cy++)for(let cx=0;cx<TCX;cx++)this.chunks.push({cx,cy,cz,mesh:null,dirty:true});
-    this.flush(999);
+    this.dirtyCount=this.chunks.length;this.flush(Infinity);
+  },
+  resetField(){
+    this.deepY=0;AIRCNT.fill(0);CaveLayout.prepare();
+    for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++)TF.fill(clamp((TOPY-(TG.y0+j*VS))/VS,-DMAX,DMAX),TI(0,j,k),TI(0,j,k)+TNX);
+    const c=CaveLayout.pocket;
+    for(let k=Math.floor((c.z-c.rz-.18-TG.z0)/VS);k<=Math.ceil((c.z+c.rz+.18-TG.z0)/VS);k++)
+      for(let j=Math.floor((c.y-c.ry-.18-TG.y0)/VS);j<=Math.ceil((c.y+c.ry+.18-TG.y0)/VS);j++)
+        for(let i=Math.floor((c.x-c.rx-.18-TG.x0)/VS);i<=Math.ceil((c.x+c.rx+.18-TG.x0)/VS);i++){
+          const id=TI(i,j,k),d=CaveLayout.pocketDistance(TG.x0+i*VS,TG.y0+j*VS,TG.z0+k*VS)/VS;
+          TF[id]=Math.min(TF[id],clamp(d,-DMAX,DMAX));
+        }
+  },
+  restoreLegacy(field){
+    this.resetField();
+    for(let k=0;k<71;k++)for(let j=0;j<OLD_NY;j++)TF.set(field.subarray(71*(j+OLD_NY*k),71*(j+OLD_NY*k)+71),TI(GRID_OFFSET.x,j+GRID_OFFSET.y,k+GRID_OFFSET.z));
   },
   sample(x,y,z){
     const fx=(x-TG.x0)/VS,fy=(y-TG.y0)/VS,fz=(z-TG.z0)/VS;
@@ -2217,11 +2269,11 @@ const Terrain={
       const id=TI(i,j,k);const old=TF[id];
       const ds=(dd-r)/VS;if(ds>=old)continue;
       const rh=Math.hypot(x-PCX,z-PCZ);
-      const cv=Math.max(ds,(rh-R_DIG)/VS,(bnd(4,x,z)-y)/VS,(bnd(gi,x,z)-y)/VS);
-      if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(rh<R_DIG&&y<this.deepY)this.deepY=y;}}
+      const cv=Math.max(ds,CaveLayout.limit(x,y,z)/VS,tool<3?(bnd(gi,x,z)-y)/VS:-DMAX);
+      if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(y<this.deepY)this.deepY=y;}}
     }
     if(changed)this.markDirty(i0,i1,j0,j1,k0,k1);
-    if(removed)this.clearDetached();
+    if(removed)this.clearDetached({i0,i1,j0,j1,k0,k1});
     return removed;
   },
   // one dig = a wide, very shallow scoop where you hit (lots of work, little depth)
@@ -2239,46 +2291,50 @@ const Terrain={
       const ds=Math.max(rr2-rad+Math.max(0,-h)*0.8,-depth-h,h-0.22)/VS;
       const id=TI(i,j,k);const old=TF[id];if(ds>=old)continue;
       const rh=Math.hypot(x-PCX,z-PCZ);
-      const cv=Math.max(ds,(rh-R_DIG)/VS,(bnd(4,x,z)-y)/VS,(bnd(gi,x,z)-y)/VS);
-      if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(rh<R_DIG&&y<this.deepY)this.deepY=y;}}
+      const cv=Math.max(ds,CaveLayout.limit(x,y,z)/VS,tool<3?(bnd(gi,x,z)-y)/VS:-DMAX);
+      if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(y<this.deepY)this.deepY=y;}}
     }
     this.lastCarveChanged=changed;
     if(changed)this.markDirty(i0,i1,j0,j1,k0,k1);
-    if(removed)this.clearDetached();
+    if(removed)this.clearDetached({i0,i1,j0,j1,k0,k1});
     return removed;
   },
-  clearDetached(){
-    // Soil that has lost every connection to the ground crumbles away. Seed
-    // intact vertical columns first, then follow sideways supports so real
-    // overhangs remain. Reuse buffers; this runs on excavation, not every frame.
-    const seen=this.supportSeen||(this.supportSeen=new Uint8Array(TF.length));seen.fill(0);
-    const queue=this.supportQueue||(this.supportQueue=new Int32Array(TF.length));
-    const loose=this.supportLoose||(this.supportLoose=new Int32Array(TF.length));
-    const plane=TNX*TNY;let head=0,tail=0,count=0;
-    for(let k=0;k<TNZ;k++)for(let i=0;i<TNX;i++){
-      let j=0,id=TI(i,0,k);
-      for(;j<TNY&&TF[id]>0;j++,id+=TNX)seen[id]=1;
-      for(;j<TNY;j++,id+=TNX)if(TF[id]>0){
-        if(i===0||i===TNX-1||k===0||k===TNZ-1)seen[id]=1;
+  clearDetached(edit){
+    // Keep support scans local. Expanding the world must not turn each hit into
+    // a multi-million-voxel flood fill. The original shaft is checked as a whole;
+    // deeper branches use a padded neighborhood anchored to the surrounding rock.
+    const core=!edit||(TG.y0+edit.j1*VS>-2.15&&edit.i0<GRID_OFFSET.x+71&&edit.i1>GRID_OFFSET.x&&edit.k0<GRID_OFFSET.z+71&&edit.k1>GRID_OFFSET.z);
+    const x0=core?GRID_OFFSET.x:Math.max(0,edit.i0-22),x1=core?GRID_OFFSET.x+70:Math.min(TNX-1,edit.i1+22);
+    const z0=core?GRID_OFFSET.z:Math.max(0,edit.k0-22),z1=core?GRID_OFFSET.z+70:Math.min(TNZ-1,edit.k1+22);
+    const y0=core?GRID_OFFSET.y:Math.max(0,edit.j0-20),y1=core?TNY-1:Math.min(TNY-1,edit.j1+26);
+    const nx=x1-x0+1,ny=y1-y0+1,nz=z1-z0+1,plane=nx*ny,size=plane*nz;
+    if(!this.supportField||this.supportField.length<size){this.supportField=new Float32Array(size);this.supportSeen=new Uint8Array(size);this.supportQueue=new Int32Array(size);this.supportLoose=new Int32Array(size);}
+    const field=this.supportField,seen=this.supportSeen,queue=this.supportQueue,loose=this.supportLoose;seen.fill(0,0,size);
+    for(let k=0;k<nz;k++)for(let j=0;j<ny;j++){let a=nx*(j+ny*k),b=TI(x0,y0+j,z0+k);for(let i=0;i<nx;i++)field[a+i]=TF[b+i];}
+    let head=0,tail=0,count=0;
+    for(let k=0;k<nz;k++)for(let i=0;i<nx;i++){
+      let j=0,id=i+plane*k;
+      for(;j<ny&&field[id]>0;j++,id+=nx)seen[id]=1;
+      for(;j<ny;j++,id+=nx)if(field[id]>0){
+        if(i===0||i===nx-1||k===0||k===nz-1||j===ny-1)seen[id]=1;
         else loose[count++]=id;
       }
     }
-    const visit=id=>{if(!seen[id]&&TF[id]>0){seen[id]=1;queue[tail++]=id;}};
+    const visit=id=>{if(!seen[id]&&field[id]>0){seen[id]=1;queue[tail++]=id;}};
     for(let n=0;n<count;n++){
-      const id=loose[n],j=Math.floor(id/TNX)%TNY;
-      if(seen[id-1]||seen[id+1]||(j>0&&seen[id-TNX])||(j<TNY-1&&seen[id+TNX])||seen[id-plane]||seen[id+plane])visit(id);
+      const id=loose[n],j=Math.floor(id/nx)%ny;
+      if(seen[id-1]||seen[id+1]||(j>0&&seen[id-nx])||(j<ny-1&&seen[id+nx])||seen[id-plane]||seen[id+plane])visit(id);
     }
     while(head<tail){
-      const id=queue[head++],i=id%TNX,j=Math.floor(id/TNX)%TNY,k=Math.floor(id/plane);
-      if(i>0)visit(id-1);if(i<TNX-1)visit(id+1);
-      if(j>0)visit(id-TNX);if(j<TNY-1)visit(id+TNX);
-      if(k>0)visit(id-plane);if(k<TNZ-1)visit(id+plane);
+      const id=queue[head++],i=id%nx,j=Math.floor(id/nx)%ny,k=Math.floor(id/plane);
+      if(i>0)visit(id-1);if(i<nx-1)visit(id+1);if(j>0)visit(id-nx);if(j<ny-1)visit(id+nx);if(k>0)visit(id-plane);if(k<nz-1)visit(id+plane);
     }
     let removed=0,i0=TNX,i1=0,j0=TNY,j1=0,k0=TNZ,k1=0;
     for(let n=0;n<count;n++){
       const id=loose[n];if(seen[id])continue;
-      const i=id%TNX,j=Math.floor(id/TNX)%TNY,k=Math.floor(id/plane),y=TG.y0+j*VS;
-      TF[id]=-1;removed++;
+      const i=x0+id%nx,j=y0+Math.floor(id/nx)%ny,k=z0+Math.floor(id/plane),x=TG.x0+i*VS,y=TG.y0+j*VS,z=TG.z0+k*VS;
+      if(CaveLayout.limit(x,y,z)>=0)continue;
+      TF[TI(i,j,k)]=-1;removed++;
       if(y<0){AIRCNT[i+TNX*j]++;this.deepY=Math.min(this.deepY,y);}
       i0=Math.min(i0,i);i1=Math.max(i1,i);j0=Math.min(j0,j);j1=Math.max(j1,j);k0=Math.min(k0,k);k1=Math.max(k1,k);
     }
@@ -2295,6 +2351,7 @@ const Terrain={
   flush(max=8){let n=0;for(const ch of this.chunks){if(ch.dirty){this.meshChunk(ch);ch.dirty=false;n++;if(n>=max)break;}}this.dirtyCount=Math.max(0,this.dirtyCount-n);},
   meshChunk(ch){
     const i0=ch.cx*TCS,i1=Math.min(TNX-1,i0+TCS),j0=ch.cy*TCS,j1=Math.min(TNY-1,j0+TCS),k0=ch.cz*TCS,k1=Math.min(TNZ-1,k0+TCS);
+    if(TG.y0+j0*VS>-1.0&&(i1<GRID_OFFSET.x||i0>GRID_OFFSET.x+70||k1<GRID_OFFSET.z||k0>GRID_OFFSET.z+70))return;
     const vi0=Math.max(0,i0-1),vj0=Math.max(0,j0-1),vk0=Math.max(0,k0-1);
     // quick reject
     let hasS=false,hasA=false;
@@ -2333,7 +2390,11 @@ const Terrain={
     if(ch.mesh){ch.mesh.geometry.dispose();ch.mesh.geometry=geo;}else{ch.mesh=new THREE.Mesh(geo,this.mat);ch.mesh.receiveShadow=true;ch.mesh.castShadow=true;this.group.add(ch.mesh);}
   },
   color(x,y,z,ny,out){
-    const si=stratumIndexAt(x,y,z);const S=STRATA_C[si];
+    let si=stratumIndexAt(x,y,z);
+    const cave=y<-2.05&&CaveLayout.distance(x,y,z)<.1;
+    const rock=y<-1.95&&CaveLayout.limit(x,y,z)>-.065;
+    if(cave)si=4;if(rock)si=5;
+    const S=STRATA_C[si];
     const n=vnoise3(x*9,y*9,z*9)*0.5+0.5;
     out.copy(S[0]).lerp(S[1],n);
     const band=Math.sin(y*70+vnoise2(x*5,z*5)*2.5)*0.5+0.5;out.multiplyScalar(0.9+band*0.14);
@@ -2346,6 +2407,37 @@ const Terrain={
 const STRATA_C=STRATA.map(s=>[new THREE.Color(s.col),new THREE.Color(s.col2)]);
 const GRASS_C=[new THREE.Color(0x58a83a),new THREE.Color(0x7fc653)];
 const _tc=new THREE.Color();
+
+// A remembered pose in a sealed, body-sized pocket. There is no dialogue,
+// task, following behavior, or idle life simulation attached to this figure.
+const MemoryFigure={
+  person:null,seen:false,turn:0,probe:{p:new THREE.Vector3(),n:new THREE.Vector3()},
+  init(){
+    const c=CaveLayout.pocket;
+    this.person=makePerson({skin:0xd7baa4,hair:0x302c2d,hairStyle:'cap',top:0x727a76,bottom:0x494749,scale:.94});
+    const p=this.person;p.root.name='remembered-figure';
+    p.root.position.set(c.x+.63,c.y-.08,c.z-.08);p.root.rotation.z=Math.PI/2;
+    p.legL.rotation.x=.3;p.legR.rotation.x=.54;p.armL.rotation.x=-.45;p.armR.rotation.x=-.2;
+    p.armL.rotation.z=-.3;p.armR.rotation.z=.23;p.headG.rotation.x=-.12;
+    // The eyes share the existing character style but have no shining catchlight.
+    p.headG.children.forEach(o=>{if(o.isMesh&&o.material.isMeshBasicMaterial)o.visible=false;});
+    [p.legL,p.legR,p.armL,p.armR].forEach(bakeVC);
+    p.root.visible=false;SURF.scene.add(p.root);
+    this.face=new THREE.Vector3();this.direction=new THREE.Vector3();
+  },
+  restore(seen){this.seen=seen;this.turn=seen?1:0;if(this.person)this.person.headG.rotation.x=seen?.04:-.12;},
+  update(dt,eye){
+    const p=this.person;if(!p)return;
+    const c=CaveLayout.pocket,near=eye.y<-2&&eye.distanceToSquared(p.root.position)<25;
+    p.root.visible=near;if(!near)return;
+    if(!this.seen){
+      p.root.updateMatrixWorld(true);p.head.getWorldPosition(this.face);
+      this.direction.copy(this.face).sub(eye);const distance=this.direction.length();this.direction.normalize();
+      if(distance<3.2&&viewDir(_vg).dot(this.direction)>.65&&!Terrain.ray(eye,this.direction,Math.max(0,distance-.3),this.probe))this.seen=true;
+    }
+    if(this.seen&&this.turn<1){this.turn=Math.min(1,this.turn+dt*.7);p.headG.rotation.x=lerp(-.12,.04,easeInOut(this.turn));}
+  },
+};
 
 // ---------- inner (the hole) ----------
 const INNER_ITEM_SCALE=1.3;
@@ -2369,7 +2461,7 @@ const Inner={
   items:[], loose:[], debris:[], puffs:[], trail:[], falling:[], target:{hit:false,p:new THREE.Vector3(),n:new THREE.Vector3(),t:0}, tinks:0, vineDirty:true, vineT:0,
   init(){
     const S=SURF.scene;
-    Terrain.init();S.add(Terrain.group);
+    Terrain.init();S.add(Terrain.group);MemoryFigure.init();
     // items
     this.glintMat=new THREE.SpriteMaterial({map:glintTex,transparent:true,depthTest:false,depthWrite:false,opacity:0.9});
     const F=setupFinds();this.pool=[F.b0,F.b1,F.b2];this.poolCd=true;this.poolCap=true;this.nextFind=14;
@@ -2401,8 +2493,9 @@ const Inner={
     if(!T.hit){this.ring.visible=false;HU.uHitOn.value=0;return;}
     const x=T.p.x,y=T.p.y,z=T.p.z;const rh=Math.hypot(x-PCX,z-PCZ);
     T.si=stratumIndexAt(x-T.n.x*0.015,y-T.n.y*0.015,z-T.n.z*0.015);
-    T.block=rh>R_DIG-0.03?'hard':T.si===5||y<bnd(4,x,z)+0.012?'bed':STRATA[T.si].tool>G.tool?'tool':null;
-    const r=TOOL_R[G.tool]*STR_K[Math.min(T.si,4)];
+    if(y<CaveLayout.ceiling&&CaveLayout.distance(x,y,z)<.08)T.si=4;
+    T.block=CaveLayout.limit(x,y,z)>-.012?'hard':STRATA[T.si].tool>G.tool?'tool':null;
+    const r=G.tool===3&&y<CaveLayout.ceiling?.32:TOOL_R[G.tool]*STR_K[Math.min(T.si,4)];
     this.ring.visible=false;
     HU.uHit.value.copy(T.p);HU.uHitR.value=clamp(Math.min(r*0.7,T.p.distanceTo(o)*0.12),0.03,0.2);HU.uHitCol.value.set(T.block?0xff8a3a:0xffffff);HU.uHitOn.value=1;
   },
@@ -2411,7 +2504,7 @@ const Inner={
     if(!T.hit){AU.swing(G.tool);this.airN=(this.airN||0)+1;if(this.airN>=3&&P.pos.y>-0.12&&(!this.airT||G.t-this.airT>8)){this.airT=G.t;UI.hint('흙에 손이 안 닿는다. 발밑을 내려다보세요.',3200);}return 'air';}this.airN=0;
     const p=T.p;const si=Math.min(T.si,5);
     if(T.block==='bed'){AU.clank();this.sparks(p,T.n);G.shake=1.0;if(!G.bedrockHit){G.bedrockHit=true;UI.hint('더는 파지지 않는다.',3500);}return 'bed';}
-    if(T.block==='hard'){AU.tink();this.puff(p,0x9a8a7a,2);G.shake=0.25;if(!this.hardT||G.t-this.hardT>6){this.hardT=G.t;UI.hint('여기는 안 파진다. 움집 앞마당 가운데 흙만 파진다.',3200);}return 'hard';}
+    if(T.block==='hard'){AU.clank();this.puff(p,0x66616c,2);G.shake=0.35;return 'hard';}
     if(T.block==='tool'){
       AU.tink();this.puff(p,STRATA[T.si].col2,2);G.shake=0.3;this.tinks++;
       if(G.tool<2&&this.tinks>=3&&(!this.toolHintT||G.t-this.toolHintT>10)){this.toolHintT=G.t;UI.hint(G.tool===0?'맨손으로는 안 파진다. 근처에 나뭇가지가 박혀 있다.':'나뭇가지로는 안 파진다. 점토 속에 돌이 묻혀 있다.',4200);}
@@ -2419,8 +2512,9 @@ const Inner={
       return 'tool';
     }
     this.tinks=0;
-    const r=TOOL_R[G.tool]*STR_K[si];
-    const removed=Terrain.carveDisc(p,T.n,r,TOOL_SCOOP[G.tool]*STR_K[si],G.tool);
+    const caveDig=G.tool===3&&p.y<CaveLayout.ceiling;
+    const r=caveDig?.32:TOOL_R[G.tool]*STR_K[si];
+    const removed=Terrain.carveDisc(p,T.n,r,caveDig?.065:TOOL_SCOOP[G.tool]*STR_K[si],G.tool);
     if(!Terrain.lastCarveChanged){AU.tink();return 'hard';}
     AU.dig(si,G.tool);G.shake=0.35+G.tool*0.12;G.digs++;
     this.burst(p,T.n,d,si,removed);this.maybeFind(p);
@@ -2457,6 +2551,7 @@ const Inner={
     it.state='pop';it.t=0;it.from=it.mesh.position.clone();it.mesh.visible=true;it.glint.visible=false;AU.pop();
   },
   spawnLitter(era){
+    if(Math.hypot(P.pos.x-PCX,P.pos.z-PCZ)>R_DIG)return;
     let pool=[];for(let e=1;e<=Math.min(era,5);e++)pool=pool.concat(LITTER_BY_ERA[e]);if(!pool.length)return;
     const fresh=pool.filter(id=>!G.got[id]&&!this.falling.some(f=>f.id===id)&&!this.loose.some(l=>l.id===id));
     const id=fresh.length?pick(fresh):pick(LITTER_BY_ERA[Math.min(era,8)]||pool);
@@ -2477,6 +2572,7 @@ const Inner={
   },
   update(dt,t,P,camPos){
     const S=SURF.scene;const dk=this.depthK(P.pos.y);
+    MemoryFigure.update(dt,camPos);
     this.light.position.copy(camPos).add(V3(0,0.1,0));this.light.intensity=P.pos.y<-0.2?lerp(0.0,0.5,dk):0;
     // items
     for(let i=this.items.length-1;i>=0;i--){const it=this.items[i];
@@ -3007,7 +3103,7 @@ const Game={
     else if(this.canPlaceItem())this.placeItem();
   },
   nearPit(){return Math.hypot(P.pos.x-Surface.pitPos.x,P.pos.z-Surface.pitPos.z)<1.75;},
-  canClimb(){return G.state==='surface'&&P.pos.y<-0.12;},
+  canClimb(){return G.state==='surface'&&P.pos.y<-0.12&&Math.hypot(P.pos.x-PCX,P.pos.z-PCZ)<R_DIG-.12;},
   onTap(x,y){if(UI.inspOpen)return;this.pickAt(new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   onClick(x,y,locked){if(UI.inspOpen)return;this.pickAt(locked?new THREE.Vector2(0,0):new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   pickAt(ndc){
@@ -3050,7 +3146,7 @@ const Game={
     travel.divideScalar(steps);P.pos.copy(prev);P.grounded=false;
     for(let i=0;i<steps;i++){P.pos.add(travel);P.grounded=innerCollide()||P.grounded;}
     const intended=Math.hypot(P.vel.x,P.vel.z)*dt,actual=Math.hypot(P.pos.x-prev.x,P.pos.z-prev.z);
-    if(wasG&&prev.y>-0.25&&w.moving&&intended>0.003&&actual<intended*0.5){const test=prev.clone();test.x+=P.vel.x*dt*2.2;test.z+=P.vel.z*dt*2.2;test.y+=0.34;if(spheresFree(test)){P.pos.copy(test);P.vel.y=0;}}
+    if(wasG&&w.moving&&intended>0.003&&actual<intended*0.5){const test=prev.clone();test.x+=P.vel.x*dt*2.2;test.z+=P.vel.z*dt*2.2;test.y+=0.34;if(spheresFree(test)){P.pos.copy(test);P.vel.y=0;}}
     if(!wasG&&P.grounded&&vyBefore<-4)AU.land();
     if(P.pos.y<TG.y0-0.3||!Number.isFinite(P.pos.y)){P.pos.copy(this.lastTop);P.vel.set(0,0,0);}
     if(P.grounded&&P.pos.y>-0.05)this.lastTop.copy(P.pos);
@@ -3072,7 +3168,7 @@ const Game={
   afterDig(){
     G.maxDepth=Math.max(G.maxDepth,-Terrain.deepY);
     if(G.era>=1&&G.digs%96===0)Inner.spawnLitter(G.era);
-    if(G.era<LAST_ERA&&Math.tan(camera.fov*DEG/2)*Math.cos(P.pitch)+Math.sin(P.pitch)<-0.25&&G.digs-(this.lastEraDig||0)>=eraDigInterval(G.era)){
+    if(G.era<LAST_ERA&&(camera.position.y<-.4||Math.tan(camera.fov*DEG/2)*Math.cos(P.pitch)+Math.sin(P.pitch)<-0.25)&&G.digs-(this.lastEraDig||0)>=eraDigInterval(G.era)){
       this.lastEraDig=G.digs;G.era++;G.maxEra=G.era;G.surfacings++;G.age=Math.min(1,G.era/8);
       View.setAge(G.age);setAge(this.playerModel,G.age);P.eye=1.15-0.15*G.age;P.speedK=1-0.25*G.age;
       Surface.buildEra(G.era);AU.startAmb(G.era,1.5);Inner.spawnLitter(G.era);
@@ -3332,22 +3428,66 @@ const Game={
 };
 // ---------- local continuation ----------
 function encodeTerrain(buffer){
-  const bits=new Uint32Array(buffer);let runs=0,hash=2166136261;
-  for(let i=0;i<bits.length;i++){if(!i||bits[i]!==bits[i-1])runs++;hash=Math.imul(hash^bits[i],16777619)>>>0;}
-  let bytes,codec;
-  if(runs*2<bits.length){const packed=new Uint32Array(runs*2);let n=0;
-    for(let i=0;i<bits.length;){const value=bits[i];let end=i+1;while(end<bits.length&&bits[end]===value)end++;packed[n++]=end-i;packed[n++]=value;i=end;}
-    bytes=new Uint8Array(packed.buffer);codec='rle32';
-  }else{bytes=new Uint8Array(buffer);codec='raw32';}
-  let text='';for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));
-  return {codec,data:btoa(text),hash};
+  // Byte planes keep identical float bits together. This preserves every voxel
+  // exactly while fitting a fully excavated cave into the existing local save.
+  const bits=new Uint32Array(buffer),length=bits.length;
+  let hash=2166136261;for(let i=0;i<length;i++)hash=Math.imul(hash^bits[i],16777619)>>>0;
+  const packed=new Uint8Array(length*4+Math.ceil(length/128)*4+16);let n=0;
+  for(let shift=0;shift<32;shift+=8){
+    let i=0;
+    while(i<length){
+      const value=(bits[i]>>>shift)&255;let run=1;
+      while(run<130&&i+run<length&&((bits[i+run]>>>shift)&255)===value)run++;
+      if(run>=3){packed[n++]=128+run-3;packed[n++]=value;i+=run;continue;}
+      const start=i;i+=run;
+      while(i<length&&i-start<128){const v=(bits[i]>>>shift)&255;
+        if(i+2<length&&v===((bits[i+1]>>>shift)&255)&&v===((bits[i+2]>>>shift)&255))break;
+        i++;
+      }
+      // The first one/two-byte run can cross a literal block's upper bound only
+      // at the end of an earlier block, which always starts afresh here.
+      packed[n++]=i-start-1;for(let k=start;k<i;k++)packed[n++]=(bits[k]>>>shift)&255;
+    }
+  }
+  // localStorage charges UTF-16 code units. Store 15 useful bits per safe code
+  // unit instead of base64's 6; no surrogates or control characters are emitted.
+  let data='',acc=0,bitsLeft=0;const chars=[];
+  for(let i=0;i<n;i++){acc=(acc<<8)|packed[i];bitsLeft+=8;
+    if(bitsLeft>=15){bitsLeft-=15;chars.push(((acc>>>bitsLeft)&32767)+32);acc&=(1<<bitsLeft)-1;}
+    if(chars.length>=16384){data+=String.fromCharCode(...chars);chars.length=0;}
+  }
+  if(bitsLeft)chars.push((acc<<(15-bitsLeft))+32);if(chars.length)data+=String.fromCharCode(...chars);
+  return {codec:'bp15',data,byteLength:n,hash};
 }
-function decodeTerrain(saved){
-  if(!saved||!['rle32','raw32'].includes(saved.codec)||typeof saved.data!=='string'||saved.data.length>TF.length*6)throw Error('terrain format');
-  const text=atob(saved.data);if(text.length%4||text.length>TF.byteLength)throw Error('terrain size');
-  const bytes=Uint8Array.from(text,c=>c.charCodeAt(0)),words=new Uint32Array(bytes.buffer),out=new Uint32Array(TF.length);
-  if(saved.codec==='raw32'){if(words.length!==out.length)throw Error('terrain length');out.set(words);}
-  else{if(words.length%2)throw Error('terrain runs');let n=0;for(let i=0;i<words.length;i+=2){const count=words[i];if(!count||n+count>out.length)throw Error('terrain run');out.fill(words[i+1],n,n+count);n+=count;}if(n!==out.length)throw Error('terrain length');}
+function decodeTerrain(saved,length=TF.length){
+  if(!saved||!['bp15','bp8','rle32','raw32'].includes(saved.codec)||typeof saved.data!=='string'||saved.data.length>length*6)throw Error('terrain format');
+  let bytes;
+  if(saved.codec==='bp15'){
+    if(!Number.isInteger(saved.byteLength)||saved.byteLength<1||saved.byteLength>length*4+Math.ceil(length/128)*4+16||saved.data.length!==Math.ceil(saved.byteLength*8/15))throw Error('terrain size');
+    bytes=new Uint8Array(saved.byteLength);let acc=0,bitsLeft=0,n=0;
+    for(let i=0;i<saved.data.length;i++){const value=saved.data.charCodeAt(i)-32;if(value<0||value>32767)throw Error('terrain character');
+      acc=(acc<<15)|value;bitsLeft+=15;
+      while(bitsLeft>=8&&n<bytes.length){bitsLeft-=8;bytes[n++]=(acc>>>bitsLeft)&255;}
+      acc&=(1<<bitsLeft)-1;
+    }
+    if(n!==bytes.length||acc!==0)throw Error('terrain padding');
+  }else{const text=atob(saved.data);if(text.length>length*4)throw Error('terrain size');bytes=Uint8Array.from(text,c=>c.charCodeAt(0));}
+  const out=new Uint32Array(length);
+  if(saved.codec==='bp8'||saved.codec==='bp15'){
+    let p=0;
+    for(let shift=0;shift<32;shift+=8){let i=0;
+      while(i<length){if(p>=bytes.length)throw Error('terrain plane');const tag=bytes[p++],run=tag<128?tag+1:tag-128+3;
+        if(i+run>length||p+(tag<128?run:1)>bytes.length)throw Error('terrain run');
+        if(tag<128){for(let k=0;k<run;k++)out[i++]|=bytes[p++]<<shift;}
+        else{const value=bytes[p++]<<shift;for(let k=0;k<run;k++)out[i++]|=value;}
+      }
+    }
+    if(p!==bytes.length)throw Error('terrain trailing data');
+  }else{
+    if(bytes.length%4)throw Error('terrain size');const words=new Uint32Array(bytes.buffer);
+    if(saved.codec==='raw32'){if(words.length!==out.length)throw Error('terrain length');out.set(words);}
+    else{if(words.length%2)throw Error('terrain runs');let n=0;for(let i=0;i<words.length;i+=2){const count=words[i];if(!count||n+count>out.length)throw Error('terrain run');out.fill(words[i+1],n,n+count);n+=count;}if(n!==out.length)throw Error('terrain length');}
+  }
   let hash=2166136261;const field=new Float32Array(out.buffer);
   for(let i=0;i<out.length;i++){if(!Number.isFinite(field[i])||Math.abs(field[i])>DMAX+0.001)throw Error('terrain value');hash=Math.imul(hash^out[i],16777619)>>>0;}
   if(hash!==saved.hash)throw Error('terrain checksum');return field;
@@ -3375,7 +3515,7 @@ const Save={
   read(){
     this.saved=null;this.corrupt=false;this.storageUnavailable=false;let raw=null;
     try{raw=localStorage.getItem(this.key);}catch(e){this.storageUnavailable=true;this.error('이 브라우저에서는 자동 저장을 사용할 수 없어요.');}
-    if(raw)try{const saved=JSON.parse(raw);this.validate(saved);saved.field=decodeTerrain(saved.terrain);this.saved=saved;}
+    if(raw)try{const saved=JSON.parse(raw);this.validate(saved);saved.field=decodeTerrain(saved.terrain,saved.version===1?71*OLD_NY*71:TF.length);this.saved=saved;}
     catch(e){this.corrupt=true;this.error('저장된 진행 상황을 읽지 못했어요.');}
     $('startBtn').textContent=this.saved?'이어하기':this.corrupt?'새로 시작':'시작';$('newGameBtn').hidden=!this.saved;
   },
@@ -3384,12 +3524,12 @@ const Save={
     const vec=(v,n=3,limit=100)=>Array.isArray(v)&&v.length===n&&v.every(x=>num(x,-limit,limit));
     const id=x=>typeof x==='string'&&Object.hasOwn(ITEMS,x),junk=x=>id(x)&&!ITEMS[x].tool&&!ITEMS[x].special;
     const list=(a,test,max=10000)=>Array.isArray(a)&&a.length<=max&&a.every(test);
-    ok(s?.version===1&&s.grid===`${TNX},${TNY},${TNZ},${VS},${TG.y0}`);const d=s.state,g=d?.g,pl=d?.player,inn=d?.inner;
+    ok((s?.version===1&&s.grid===OLD_GRID_KEY)||(s?.version===2&&s.grid===`${TNX},${TNY},${TNZ},${VS},${TG.y0}`));const d=s.state,g=d?.g,pl=d?.player,inn=d?.inner;
     ok(g&&pl&&inn);this.numbers.forEach(k=>ok(num(g[k],0,k==='tool'?3:k==='era'||k==='maxEra'?LAST_ERA:k==='maxDepth'?10:1e9)));
     ['era','maxEra','tool','digs','surfacings','descents'].forEach(k=>ok(Number.isInteger(g[k])));ok(g.maxEra>=g.era);
     this.flags.forEach(k=>ok(typeof g[k]==='boolean'));ok(list(g.pouch,junk,POUCH)&&g.got&&typeof g.got==='object'&&!Array.isArray(g.got));Object.entries(g.got).forEach(([k,v])=>ok(junk(k)&&typeof v==='boolean'));
     ok(['surface','hut'].includes(pl.scene)&&vec(pl.pos)&&num(pl.pos[1],TG.y0-0.5,10)&&num(pl.yaw,-1e8,1e8)&&num(pl.pitch,-1.6,1.6)&&typeof pl.crafting==='boolean');
-    ok(vec(d.lastTop)&&num(d.lastEraDig,0,g.digs)&&typeof d.card==='boolean');
+    ok(vec(d.lastTop)&&num(d.lastEraDig,0,g.digs)&&typeof d.card==='boolean');ok(d.memorySeen===undefined||typeof d.memorySeen==='boolean');
     let count=0;const orders=new Set(),origin=o=>{ok(o&&junk(o.id)&&num(o.x,-3,3)&&num(o.z,-3,3)&&typeof o.slot==='boolean'&&Number.isInteger(o.order)&&o.order>=0&&!orders.has(o.order));orders.add(o.order);};
     ok(list(d.hut,it=>{origin(it);ok(num(it.rotation,-1e8,1e8));ok(list(it.parts,(p,i)=>{count++;ok(junk(p.id)&&vec(p.p,3,5000)&&vec(p.q,4,1.01)&&Math.abs(Math.hypot(...p.q)-1)<0.01);if(i){origin(p.origin);ok(p.origin.id===p.id);}else ok(p.id===it.id);return true;})&&it.parts.length>0);return true;}));ok(count<=50000&&d.hut.filter(it=>it.slot).length<=Hut.slots.length);
     ok(list(inn.pool,a=>list(a,junk,44),3)&&inn.pool.length===3&&typeof inn.poolCd==='boolean'&&typeof inn.poolCap==='boolean');
@@ -3402,7 +3542,7 @@ const Save={
     const g={};[...this.numbers,...this.flags].forEach(k=>g[k]=G[k]);g.pouch=G.pouch.slice();g.got={...G.got};
     const origin=it=>({id:it.id,x:it.x,z:it.z,slot:!!it.slot,order:it.order});
     const pos=Game.tr?.kind==='climb'?Game.tr.to:P.pos;
-    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,
+    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,memorySeen:MemoryFigure.seen,
       hut:Hut.items.map(it=>({...origin(it),rotation:it.mesh.rotation.y,parts:Assemblage.parts(it).map(p=>({id:p.id,p:p.p.slice(),q:p.q.slice(),...(p.origin?{origin:{...p.origin}}:{})}))})),
       inner:{pool:Inner.pool.map(p=>p.slice()),poolCd:Inner.poolCd,poolCap:Inner.poolCap,sinceFind:Inner.sinceFind||0,nextFind:Inner.nextFind,tinks:Inner.tinks,
         items:Inner.items.map(it=>({id:it.id,pos:it.pos.toArray(),state:it.state,tool:!!it.tool,requiredTool:it.requiredTool||0})),
@@ -3420,7 +3560,7 @@ const Save={
   },
   commit(state,text,terrain){
     if(this.paused||!this.active)return;
-    try{const record={version:1,grid:`${TNX},${TNY},${TNZ},${VS},${TG.y0}`,savedAt:Date.now(),writer:this.writer,state,terrain};this.validate(record);localStorage.setItem(this.key,JSON.stringify(record));this.lastState=text;this.failure=false;this.storageUnavailable=false;$('saveNote').hidden=true;}
+    try{const record={version:2,grid:`${TNX},${TNY},${TNZ},${VS},${TG.y0}`,savedAt:Date.now(),writer:this.writer,state,terrain};this.validate(record);localStorage.setItem(this.key,JSON.stringify(record));this.lastState=text;this.failure=false;this.storageUnavailable=false;$('saveNote').hidden=true;}
     catch(e){this.error('진행 상황을 저장하지 못했어요. 브라우저의 저장 공간을 확인해 주세요.');}
   },
   reset(){
@@ -3429,11 +3569,12 @@ const Save={
     this.active=false;this.paused=false;this.busy=null;this.token++;this.saved=null;this.corrupt=false;this.lastState='';this.cache=null;this.cacheRevision=-1;this.failure=false;$('saveNote').hidden=true;return true;
   },
   restore(){
-    const s=this.saved;if(!s)throw Error('no save');this.validate(s);const field=s.field||decodeTerrain(s.terrain),d=s.state,g=d.g;
-    TF.set(field);AIRCNT.fill(0);Terrain.deepY=0;
-    for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++){const y=TG.y0+j*VS;if(y>=0)continue;for(let i=0;i<TNX;i++)if(TF[TI(i,j,k)]<=0){AIRCNT[i+TNX*j]++;if(Math.hypot(TG.x0+i*VS-PCX,TG.z0+k*VS-PCZ)<R_DIG)Terrain.deepY=Math.min(Terrain.deepY,y);}}
+    const s=this.saved;if(!s)throw Error('no save');this.validate(s);const field=s.field||decodeTerrain(s.terrain,s.version===1?71*OLD_NY*71:TF.length),d=s.state,g=d.g;
+    if(s.version===1)Terrain.restoreLegacy(field);else TF.set(field);AIRCNT.fill(0);Terrain.deepY=0;
+    MemoryFigure.restore(!!d.memorySeen);
+    for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++){const y=TG.y0+j*VS;if(y>=0)continue;for(let i=0;i<TNX;i++)if(TF[TI(i,j,k)]<=0){AIRCNT[i+TNX*j]++;if(CaveLayout.pocketDistance(TG.x0+i*VS,y,TG.z0+k*VS)>0)Terrain.deepY=Math.min(Terrain.deepY,y);}}
     const cleared=Terrain.clearDetached();
-    Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(999);Terrain.revision=cleared?1:0;
+    Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(Infinity);Terrain.revision=cleared?1:0;
     [...this.numbers,...this.flags].forEach(k=>G[k]=g[k]);G.pouch=g.pouch.slice();G.got={...g.got};G.age=Math.min(1,G.era/8);
     for(const it of [...Inner.items,...Inner.loose]){SURF.scene.remove(it.mesh);dispose(it.mesh);SURF.scene.remove(it.glint);}Inner.items=[];Inner.loose=[];Inner.falling=[];
     Inner.pool=d.inner.pool.map(p=>p.slice());['poolCd','poolCap','sinceFind','nextFind','tinks'].forEach(k=>Inner[k]=d.inner[k]);
@@ -3452,7 +3593,7 @@ const Save={
     Input.release();Input.enabled=true;Game.setCam();UI.pouch();UI.showPouch(true);UI.cross(true);UI.digBtn(G.state==='surface');UI.act(null);UI.hint(null);UI.minimap(false);Game.mmOn=false;
     if(d.player.crafting&&G.tool<3){G.state='craft';Game.craftT=0;Input.enabled=false;View.mode='craft';View.startCraft();AU.craft();}
     AU.startAmb(G.era,0.6);AU.setMuffle(Game.sceneKey==='hut'||P.pos.y<-0.02,Inner.depthK(P.pos.y));
-    this.cache=s.terrain;this.cacheRevision=0;this.lastState='';this.active=true;this.paused=false;this.saved=null;this.flush();
+    this.cache=s.version===2?s.terrain:null;this.cacheRevision=s.version===2?0:-1;this.lastState='';this.active=true;this.paused=false;this.saved=null;this.flush();
   },
 };
 
@@ -3462,5 +3603,6 @@ Game.init();
 </script>
 </body>
 </html>
+
 
 
