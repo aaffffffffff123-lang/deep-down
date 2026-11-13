@@ -2201,7 +2201,7 @@ const Terrain={
   hitU:{uHit:{value:new THREE.Vector3(0,-999,0)},uHitR:{value:0.25},uHitCol:{value:new THREE.Color(1,1,1)},uHitOn:{value:0}},
   init(){
     this.resetField();
-    this.mat=TM({vertexColors:true,roughness:0.95,metalness:0});
+    this.mat=TM({vertexColors:true,roughness:0.95,metalness:0,side:THREE.DoubleSide});
     const det=document.createElement('canvas');det.width=det.height=256;const c=det.getContext('2d');
     c.fillStyle='rgb(235,235,235)';c.fillRect(0,0,256,256);
     c.strokeStyle='rgb(40,40,40)';c.lineCap='round';
@@ -2348,7 +2348,9 @@ const Terrain={
     const cz0=Math.max(0,Math.floor((k0-2)/TCS)),cz1=Math.min(TCZ-1,Math.floor((k1+1)/TCS));
     for(let cz=cz0;cz<=cz1;cz++)for(let cy=cy0;cy<=cy1;cy++)for(let cx=cx0;cx<=cx1;cx++){const ch=this.chunks[cx+TCX*(cy+TCY*cz)];if(!ch.dirty){ch.dirty=true;this.dirtyCount++;}}
   },
-  flush(max=8){let n=0;for(const ch of this.chunks){if(ch.dirty){this.meshChunk(ch);ch.dirty=false;n++;if(n>=max)break;}}this.dirtyCount=Math.max(0,this.dirtyCount-n);},
+  // A single excavation can touch several neighboring chunks. Present their
+  // shared edges together; partial updates leave real holes for one or more frames.
+  flush(){if(!this.dirtyCount)return;for(const ch of this.chunks)if(ch.dirty){this.meshChunk(ch);ch.dirty=false;}this.dirtyCount=0;},
   meshChunk(ch){
     const i0=ch.cx*TCS,i1=Math.min(TNX-1,i0+TCS),j0=ch.cy*TCS,j1=Math.min(TNY-1,j0+TCS),k0=ch.cz*TCS,k1=Math.min(TNZ-1,k0+TCS);
     if(TG.y0+j0*VS>-1.0&&(i1<GRID_OFFSET.x||i0>GRID_OFFSET.x+70||k1<GRID_OFFSET.z||k0>GRID_OFFSET.z+70))return;
@@ -2983,6 +2985,7 @@ const P={pos:new THREE.Vector3(0.3,0,-1.6),yaw:0,pitch:-0.25,vel:new THREE.Vecto
 const FAST=location.search.includes('fast');
 if(FAST){for(let i=0;i<TOOL_R.length;i++){TOOL_R[i]*=1.7;TOOL_T[i]*=0.6;}}
 const _g=new THREE.Vector3();
+const _camAnchor=new THREE.Vector3(),_camWanted=new THREE.Vector3(),_camProbe=new THREE.Vector3(),_camNormal=new THREE.Vector3();
 function polyCurve(pts){const cp=new THREE.CurvePath();for(let i=1;i<pts.length;i++)cp.add(new THREE.LineCurve3(pts[i-1].clone(),pts[i].clone()));return cp;}
 function viewDir(out){const cp=Math.cos(P.pitch);return (out||new THREE.Vector3()).set(-Math.sin(P.yaw)*cp,Math.sin(P.pitch),-Math.cos(P.yaw)*cp);}
 function lookAtYP(from,to){const d=to.clone().sub(from);return {yaw:Math.atan2(-d.x,-d.z),pitch:Math.atan2(d.y,Math.hypot(d.x,d.z))};}
@@ -3120,8 +3123,38 @@ const Game={
     const sh=G.shake||0;G.shake=Math.max(0,sh-dt*4.5);
     const j=()=>sh?(Math.random()-0.5)*0.028*sh:0;
     camera.position.set(P.pos.x+j(),P.camY+bob+j(),P.pos.z+j());camera.rotation.set(P.pitch+j()*0.6,P.yaw,0);
+    this.constrainCamera();
   },
-  setCam(){camera.position.set(P.pos.x,P.camY,P.pos.z);camera.rotation.set(P.pitch,P.yaw,0);},
+  constrainCamera(){
+    if(this.sceneKey!=='surface'||G.state!=='surface')return;
+    if(P.pos.y+P.eye>.2&&camera.position.y>.2)return;
+    // Protect the entire near plane, including its corners on wide phone screens.
+    // The eye is above the body's head sphere, and bob/shake/smoothing add further
+    // offsets; those offsets must stop at soil just like physical movement does.
+    const tan=Math.tan(camera.fov*DEG/2),radius=Math.max(.065,camera.near*Math.hypot(1,tan,tan*camera.aspect)+VS*.6);
+    _camWanted.copy(camera.position);_camAnchor.set(P.pos.x,P.pos.y+Math.max(.8,P.eye-.08),P.pos.z);
+    const free=p=>Terrain.sample(p.x,p.y,p.z)<=0&&terrainSphereContact(p.x,p.y,p.z,radius,_camNormal)<.0005;
+    for(let i=0;i<8;i++){
+      const pen=terrainSphereContact(_camAnchor.x,_camAnchor.y,_camAnchor.z,radius,_camNormal);
+      if(pen<.0005)break;_camAnchor.addScaledVector(_camNormal,Math.min(.06,pen+.001));
+    }
+    if(!free(_camAnchor)){
+      // A cramped overhang can leave the nominal eye too high even though the
+      // player's torso is free. Look from that same local space, never the yard.
+      _camAnchor.set(P.pos.x,P.pos.y+.5,P.pos.z);
+      if(!free(_camAnchor)&&this.safeCamera&&this.safeCamera.distanceToSquared(_camAnchor)<4&&free(this.safeCamera))_camAnchor.copy(this.safeCamera);
+    }
+    const steps=Math.max(1,Math.ceil(_camAnchor.distanceTo(_camWanted)/.025));let lo=0,hi=1;
+    for(let i=1;i<=steps;i++){
+      const t=i/steps;_camProbe.lerpVectors(_camAnchor,_camWanted,t);
+      if(!free(_camProbe)){hi=t;break;}lo=t;
+    }
+    if(lo<1)for(let i=0;i<6;i++){const t=(lo+hi)*.5;_camProbe.lerpVectors(_camAnchor,_camWanted,t);if(free(_camProbe))lo=t;else hi=t;}
+    camera.position.lerpVectors(_camAnchor,_camWanted,lo);
+    P.camY+=camera.position.y-_camWanted.y;
+    if(free(camera.position)){if(!this.safeCamera)this.safeCamera=new THREE.Vector3();this.safeCamera.copy(camera.position);}
+  },
+  setCam(){camera.position.set(P.pos.x,P.camY,P.pos.z);camera.rotation.set(P.pitch,P.yaw,0);this.constrainCamera();},
   groundKind(){const e=Surface.era;if(e>=9)return 'dirt';const yc=Surface.yardC;const ex=(P.pos.x-yc.x)/5.2,ez=(P.pos.z-yc.z)/6.2;
     if(ex*ex+ez*ez<1)return 'dirt';if(Math.abs(P.pos.z-4.4)<1.4)return e>=2?'pave':'dirt';return e>=4?'pave':'grass';},
   // ----- the yard: walking and digging in one continuous place -----
