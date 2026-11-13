@@ -141,6 +141,16 @@
   #attachTray button{flex:0 0 58px;height:58px;padding:2px;background:#fff9ec;border:2px solid #d3bc99;border-radius:14px;cursor:pointer;}
   #attachTray button.selected{border:3px solid var(--brown);background:#e7d4b3;}
   #attachTray img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
+  #attachHelp{font-size:14px;text-align:center;}
+  #assembleOpen{position:fixed;right:calc(20px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));min-width:104px;min-height:60px;padding:13px 14px;border:3px solid #1c1009;border-radius:6px;background:#fffdf6;color:#1c1009;box-shadow:4px 4px 0 #1c1009;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;}
+  #assembleOpen[hidden],#assemblyPicker[hidden],#attachHelp[hidden]{display:none;}
+  #assemblyPicker{position:fixed;inset:0;z-index:12;background:rgba(255,253,246,.98);display:flex;flex-direction:column;align-items:center;gap:18px;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));}
+  #assemblyPicker h2{font-size:21px;margin:0;}
+  #assemblyList{width:min(100%,520px);flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));align-content:start;gap:10px;overflow-y:auto;touch-action:pan-y;}
+  #assemblyList button,#assemblyClose{border:2px solid #1c1009;border-radius:6px;background:#fff6e4;color:#1c1009;padding:10px;font-family:inherit;font-weight:700;cursor:pointer;}
+  #assemblyList button{min-height:106px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  #assemblyList img{width:64px;height:64px;object-fit:contain;pointer-events:none;}
+  #assemblyClose{min-width:130px;min-height:44px;}
   #inspName{font-size:26px;font-weight:800;margin-top:6px;}
   #inspRare{font-size:14px;padding:4px 12px;border-radius:14px;background:var(--cream2);border:2px solid var(--line);color:var(--brown2);font-weight:700;}
   #inspRare.r2{background:#dff1ff;border-color:#9fd0ff;color:#2d5f8a}
@@ -214,13 +224,19 @@
   <div id="joy"><div id="joyk"></div></div>
   <button id="act"></button>
   <button id="dig">파기</button>
+  <button id="assembleOpen" hidden>붙이기</button>
   <div id="fade"></div>
+  <div id="assemblyPicker" hidden role="dialog" aria-modal="true" aria-labelledby="assemblyTitle">
+    <h2 id="assemblyTitle">붙일 물건 고르기</h2>
+    <div id="assemblyList"></div><button id="assemblyClose">닫기</button>
+  </div>
   <div id="insp">
     <canvas id="inspc"></canvas>
     <div id="inspName"></div>
     <div id="inspRare"></div>
     <div id="inspDesc"></div>
     <div id="assembleBar" hidden><button id="attachStart">붙이기</button><button id="detachLast">떼기</button></div>
+    <div id="attachHelp" hidden></div>
     <div id="attachTray" hidden></div>
     <div id="attachTools" hidden>
       <button id="attachTurn" aria-label="붙일 물건 옆으로 돌리기">↻</button><button id="attachTilt" aria-label="붙일 물건 기울이기">↷</button>
@@ -2055,6 +2071,7 @@ const Terrain={
       if(cv<old){const nv=Math.max(-DMAX,cv);TF[id]=nv;changed=true;if(old>0&&nv<=0){removed++;if(y<0)AIRCNT[i+TNX*j]++;if(rh<R_DIG&&y<this.deepY)this.deepY=y;}}
     }
     if(changed)this.markDirty(i0,i1,j0,j1,k0,k1);
+    if(removed)this.clearDetached();
     return removed;
   },
   // one dig = a wide, very shallow scoop where you hit (lots of work, little depth)
@@ -2077,6 +2094,45 @@ const Terrain={
     }
     this.lastCarveChanged=changed;
     if(changed)this.markDirty(i0,i1,j0,j1,k0,k1);
+    if(removed)this.clearDetached();
+    return removed;
+  },
+  clearDetached(){
+    // Soil that has lost every connection to the ground crumbles away. Seed
+    // intact vertical columns first, then follow sideways supports so real
+    // overhangs remain. Reuse buffers; this runs on excavation, not every frame.
+    const seen=this.supportSeen||(this.supportSeen=new Uint8Array(TF.length));seen.fill(0);
+    const queue=this.supportQueue||(this.supportQueue=new Int32Array(TF.length));
+    const loose=this.supportLoose||(this.supportLoose=new Int32Array(TF.length));
+    const plane=TNX*TNY;let head=0,tail=0,count=0;
+    for(let k=0;k<TNZ;k++)for(let i=0;i<TNX;i++){
+      let j=0,id=TI(i,0,k);
+      for(;j<TNY&&TF[id]>0;j++,id+=TNX)seen[id]=1;
+      for(;j<TNY;j++,id+=TNX)if(TF[id]>0){
+        if(i===0||i===TNX-1||k===0||k===TNZ-1)seen[id]=1;
+        else loose[count++]=id;
+      }
+    }
+    const visit=id=>{if(!seen[id]&&TF[id]>0){seen[id]=1;queue[tail++]=id;}};
+    for(let n=0;n<count;n++){
+      const id=loose[n],j=Math.floor(id/TNX)%TNY;
+      if(seen[id-1]||seen[id+1]||(j>0&&seen[id-TNX])||(j<TNY-1&&seen[id+TNX])||seen[id-plane]||seen[id+plane])visit(id);
+    }
+    while(head<tail){
+      const id=queue[head++],i=id%TNX,j=Math.floor(id/TNX)%TNY,k=Math.floor(id/plane);
+      if(i>0)visit(id-1);if(i<TNX-1)visit(id+1);
+      if(j>0)visit(id-TNX);if(j<TNY-1)visit(id+TNX);
+      if(k>0)visit(id-plane);if(k<TNZ-1)visit(id+plane);
+    }
+    let removed=0,i0=TNX,i1=0,j0=TNY,j1=0,k0=TNZ,k1=0;
+    for(let n=0;n<count;n++){
+      const id=loose[n];if(seen[id])continue;
+      const i=id%TNX,j=Math.floor(id/TNX)%TNY,k=Math.floor(id/plane),y=TG.y0+j*VS;
+      TF[id]=-1;removed++;
+      if(y<0){AIRCNT[i+TNX*j]++;this.deepY=Math.min(this.deepY,y);}
+      i0=Math.min(i0,i);i1=Math.max(i1,i);j0=Math.min(j0,j);j1=Math.max(j1,j);k0=Math.min(k0,k);k1=Math.max(k1,k);
+    }
+    if(removed)this.markDirty(i0,i1,j0,j1,k0,k1);
     return removed;
   },
   markDirty(i0,i1,j0,j1,k0,k1){
@@ -2274,6 +2330,7 @@ const Inner={
     // items
     for(let i=this.items.length-1;i>=0;i--){const it=this.items[i];
       if(it.state==='buried'){const dist=it.pos.distanceTo(P.pos);it.mesh.visible=dist<5;
+        if(dist<1.9&&this.toolExposed(it)){this.release(it,camPos,viewDir());continue;}
         if(dist<4&&G.tool>=it.requiredTool){const v=Terrain.sample(it.pos.x,it.pos.y,it.pos.z);const show=v<1.5;it.glint.visible=show;if(show){const k=1+Math.sin(t*5+i)*0.25;it.glint.scale.set(0.17*k,0.17*k,1);it.glint.material.rotation=t;}}else it.glint.visible=false;}
       else if(it.state==='pop'){it.t+=dt;const k=Math.min(1,it.t/0.42);
         const target=camPos.clone().add(new THREE.Vector3(0,-0.15,-0.55).applyQuaternion(camera.quaternion));
@@ -2462,7 +2519,7 @@ const Input={
       if(isTouch(e)){
         if(!G.touch){G.touch=true;UI.touchMode();}
         if(e.clientX<window.innerWidth*0.45&&this.stickId===null){
-          this.stickId=e.pointerId;this.stickO={x:e.clientX,y:e.clientY};joy.style.display='block';joy.style.left=e.clientX+'px';joy.style.top=e.clientY+'px';knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);
+          this.stickId=e.pointerId;this.stickO={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};joy.style.display='block';joy.style.left=e.clientX+'px';joy.style.top=e.clientY+'px';knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);
         }else if(this.lookId===null){this.lookId=e.pointerId;this.lookLast={x:e.clientX,y:e.clientY};this.down={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};}
         try{canvas.setPointerCapture(e.pointerId);}catch(err){}
       }else{
@@ -2475,6 +2532,7 @@ const Input={
       if(isTouch(e)){
         if(e.pointerId===this.stickId&&this.stickO){
           let dx=e.clientX-this.stickO.x,dy=e.clientY-this.stickO.y;const R=50;const d=Math.hypot(dx,dy);
+          if(d>10)this.stickO.moved=true;
           if(d>R){dx*=R/d;dy*=R/d;}
           knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
           const m=Math.hypot(dx,dy)/R;const dead=0.12;const k=m<dead?0:Math.min(1,(m-dead)/(1-dead));
@@ -2491,8 +2549,8 @@ const Input={
     document.addEventListener('mousemove',e=>{if(this.locked&&this.enabled){this.lookDX+=e.movementX;this.lookDY+=e.movementY;}});
     const up=e=>{
       if(isTouch(e)){
-        if(e.pointerId===this.stickId){this.stickId=null;this.stickO=null;joy.style.display='none';this.raw.set(0,0);}
-        if(e.pointerId===this.lookId){this.lookId=null;this.lookLast=null;if(this.down&&!this.down.moved&&performance.now()-this.down.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);this.down=null;}
+        if(e.pointerId===this.stickId){const tap=this.stickO;this.stickId=null;this.stickO=null;joy.style.display='none';this.raw.set(0,0);if(e.type!=='pointercancel'&&tap&&!tap.moved&&performance.now()-tap.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);}
+        if(e.pointerId===this.lookId){this.lookId=null;this.lookLast=null;if(e.type!=='pointercancel'&&this.down&&!this.down.moved&&performance.now()-this.down.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);this.down=null;}
       }else{
         if(e.button===0){this.mouseDig=false;if(this.mdown&&!this.mdown.moved&&performance.now()-this.mdown.t<350&&this.clickCb)this.clickCb(e.clientX,e.clientY,this.locked);this.mdown=null;}
         this.dragLast=null;
@@ -2503,6 +2561,7 @@ const Input={
     window.addEventListener('keydown',e=>{
       if(e.repeat){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();return;}
       if(UI.inspOpen){if(e.code==='Escape')UI.closeInspect();return;}
+      if(UI.assemblyOpen){if(e.code==='Escape')UI.closeAssemblyPicker();return;}
       this.keys[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(this.keyCb)this.keyCb(e.code);});
     window.addEventListener('keyup',e=>{this.keys[e.code]=false;});
@@ -2561,6 +2620,20 @@ const UI={
     if(!locked&&['surface','hut'].includes(G.state)&&!this.inspOpen)this.hint('화면을 클릭하면 마우스로 둘러볼 수 있습니다',0);
     else if(locked&&$('hint').textContent.startsWith('화면을 클릭')){if(G.state==='surface'&&!G.digs)this.hint('마당 흙을 내려다보고 마우스 왼쪽을 누르고 있으면 팝니다',7000);else this.hint(null);}
   },
+  assemblyOpen:false,
+  openAssemblyPicker(){
+    if(G.state!=='hut'||this.inspOpen||this.assemblyOpen)return;
+    const targets=Hut.items;
+    if(!targets.length)return;
+    this.assemblyInputEnabled=Input.enabled;this.assemblyOpen=true;Input.release();Input.enabled=false;P.vel.set(0,0,0);
+    if(document.pointerLockElement)document.exitPointerLock();
+    const list=$('assemblyList');list.replaceChildren();
+    targets.forEach(it=>{const b=document.createElement('button'),img=document.createElement('img'),label=document.createElement('span');
+      b.type='button';img.src=ITEMS[it.id].icon;img.alt='';label.textContent=Assemblage.parts(it).length>1?'붙인 물건':ITEMS[it.id].name;b.append(img,label);
+      b.addEventListener('click',()=>{this.closeAssemblyPicker();this.inspect(it);this.beginAttach();});list.append(b);});
+    $('assemblyPicker').hidden=false;$('assembleOpen').hidden=true;
+  },
+  closeAssemblyPicker(){this.assemblyOpen=false;$('assemblyPicker').hidden=true;Input.release();Input.enabled=this.assemblyInputEnabled;},
   inspOpen:false, inspR:null, inspScene:null, inspCam:null, inspObj:null, inspDrag:null, inspRot:{x:0.35,y:0.4},
   inspect(subject){
     this.inspItem=typeof subject==='string'?null:subject;this.inspId=this.inspItem?this.inspItem.id:subject;
@@ -2597,7 +2670,7 @@ const UI={
     $('inspName').textContent=quiet?'':it.name;$('inspName').hidden=!!quiet;
     const r=$('inspRare');r.style.display=quiet||it.tool||it.special?'none':'';r.textContent=RARE_LABEL[it.r||1];r.className=it.r===2?'r2':it.r===3?'r3':'';
     $('inspDesc').textContent=quiet?'':(it.litter?'누가 버린 것.':(it.d||''));$('inspDesc').hidden=!!quiet;
-    $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;
+    $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;$('attachHelp').hidden=!this.attachMode;
     $('attachStart').disabled=this.attachCandidates().length===0;$('detachLast').disabled=!joined;
     if(this.inspObj){this.inspScene.remove(this.inspObj);Assemblage.release(this.inspObj);}
     const g=parts?Assemblage.mesh(parts):makeItemMesh(this.inspId);swapEnv(g,this.inspEnv);
@@ -2612,14 +2685,14 @@ const UI={
   resizeInspect(){const cv=$('inspc'),sz=cv.clientWidth;if(sz!==this.inspSize){this.inspSize=sz;this.inspR.setSize(sz,sz,false);}},
   beginAttach(){
     if(!this.attachCandidates().length)return;this.attachMode=true;this.refreshInspect();
-    const tray=$('attachTray');tray.replaceChildren();
+    const tray=$('attachTray');tray.replaceChildren();$('attachHelp').textContent='아래에서 붙일 조각을 고르세요';
     this.attachCandidates().forEach(source=>{const b=document.createElement('button'),img=document.createElement('img');b.type='button';b.setAttribute('aria-label',ITEMS[source.id].name);img.src=ITEMS[source.id].icon;img.alt='';b.append(img);
       b.addEventListener('click',()=>{this.clearGhost();const g=fitObject(Assemblage.component(source.id),0.2);swapEnv(g,this.inspEnv);
         g.traverse(o=>{if(o.isMesh){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{m.transparent=true;m.opacity=0.6;m.depthWrite=false;});}});
         g.visible=false;this.inspAssembly.add(g);this.pendingAttach={source,g,q:new THREE.Quaternion(),pose:null,contact:null};
-        [...tray.children].forEach(c=>c.classList.toggle('selected',c===b));$('attachConfirm').disabled=true;$('attachConfirm').textContent='붙일 곳 선택';
+        [...tray.children].forEach(c=>c.classList.toggle('selected',c===b));$('attachConfirm').disabled=true;$('attachConfirm').textContent='붙일 곳 선택';$('attachHelp').textContent='위 물건에서 붙일 곳을 누르세요';
       });tray.append(b);});
-    $('attachConfirm').disabled=true;$('attachConfirm').textContent='붙일 곳 선택';
+    $('attachConfirm').disabled=true;$('attachConfirm').textContent='조각 선택';
   },
   clearGhost(){if(this.pendingAttach){const g=this.pendingAttach.g;g.parent?.remove(g);Assemblage.release(g);}this.pendingAttach=null;},
   cancelAttach(){this.clearGhost();this.attachMode=false;this.inspDrag=null;},
@@ -2666,7 +2739,6 @@ const PR=0.2;const BR=[0.1,0.1,0.1];
 // not distances. Test the actual air/soil boundary, not radius + scalar value.
 const BODY_DIRS=[];
 for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++)for(let z=-1;z<=1;z++)if(x||y||z)BODY_DIRS.push(new THREE.Vector3(x,y,z).normalize());
-const _contactN=new THREE.Vector3();
 function terrainSphereContact(x,y,z,r,out){
   const center=Terrain.sample(x,y,z);let best=0;
   if(center*VS<-r*2)return 0;
@@ -2676,7 +2748,10 @@ function terrainSphereContact(x,y,z,r,out){
     let nearest=Infinity;
     for(const d of BODY_DIRS){for(let t=0.025;t<=r+0.3;t+=0.025){
       if(t>=nearest)break;
-      if(Terrain.sample(x+d.x*t,y+d.y*t,z+d.z*t)<=0){nearest=t;out.copy(d);break;}
+      if(Terrain.sample(x+d.x*t,y+d.y*t,z+d.z*t)<=0){
+        let lo=t-0.025,hi=t;for(let i=0;i<9;i++){const m=(lo+hi)*0.5;if(Terrain.sample(x+d.x*m,y+d.y*m,z+d.z*m)>0)lo=m;else hi=m;}
+        nearest=hi;out.copy(d);break;
+      }
     }}
     return Number.isFinite(nearest)?nearest+r:0;
   }
@@ -2685,13 +2760,13 @@ function terrainSphereContact(x,y,z,r,out){
     if(Terrain.sample(x+d.x*hi,y+d.y*hi,z+d.z*hi)<=0){
       hi=r*0.5;if(Terrain.sample(x+d.x*hi,y+d.y*hi,z+d.z*hi)<=0)continue;
     }
-    let lo=0;for(let i=0;i<7;i++){const t=(lo+hi)*0.5;
+    let lo=0;for(let i=0;i<10;i++){const t=(lo+hi)*0.5;
       if(Terrain.sample(x+d.x*t,y+d.y*t,z+d.z*t)>0)hi=t;else lo=t;}
-    Terrain.grad(x+d.x*hi,y+d.y*hi,z+d.z*hi,_contactN).negate();
-    if(_contactN.lengthSq()<1e-10)_contactN.copy(d).negate();else _contactN.normalize();
-    const facing=-_contactN.dot(d);if(facing<0.15)continue;
-    const pen=r-hi*facing;
-    if(pen>best){best=pen;out.copy(_contactN);}
+    // Resolve only the overlap actually found along this probe. Projecting a
+    // curved corner onto its tangent plane invents a much larger penetration
+    // and repeatedly throws the body between opposite walls.
+    const pen=r-hi;
+    if(pen>best){best=pen;out.copy(d).negate();}
   }
   return best;
 }
@@ -2701,12 +2776,15 @@ function innerCollide(){
   for(let it=0;it<6;it++){let hit=false;
     for(let s=0;s<offs.length;s++){
       const pen=terrainSphereContact(P.pos.x,P.pos.y+offs[s],P.pos.z,BR[s],_g);
-      if(pen>0.0004){hit=true;P.pos.addScaledVector(_g,Math.min(0.08,pen+0.0002));
+      if(pen>0.0001){hit=true;P.pos.addScaledVector(_g,Math.min(0.08,pen+0.0001));
         if(s===0&&_g.y>0.65)grounded=true;
         const inward=P.vel.dot(_g);if(inward<0)P.vel.addScaledVector(_g,-inward);
       }
     }if(!hit)break;
   }
+  // Contact remains valid across the tiny separation left by the solver.
+  // This probe never moves the player or keeps them standing over excavated air.
+  if(!grounded&&P.vel.y<=0.2&&terrainSphereContact(P.pos.x,P.pos.y+offs[0],P.pos.z,BR[0]+0.003,_g)>0&&_g.y>0.65)grounded=true;
   return grounded;
 }
 
@@ -2726,6 +2804,8 @@ const Game={
     $('newGameBtn').addEventListener('click',()=>{if(Save.reset()){if(this.restoreFailed)location.reload();else this.start();}});
     $('againBtn').addEventListener('click',()=>{if(Save.reset())location.reload();});
     $('act').addEventListener('click',()=>{AU.uiTap();this.action();});
+    $('assembleOpen').addEventListener('click',()=>{AU.uiTap();UI.openAssemblyPicker();});
+    $('assemblyClose').addEventListener('click',()=>UI.closeAssemblyPicker());
     Input.tapCb=(x,y)=>this.onTap(x,y);
     Input.clickCb=(x,y,locked)=>this.onClick(x,y,locked);
     Input.keyCb=code=>{
@@ -2769,15 +2849,16 @@ const Game={
   },
   action(){
     if(UI.inspOpen)return;const st=G.state;
-    if(st==='surface'&&P.pos.y<-0.4)this.startClimb();
+    if(this.canClimb())this.startClimb();
     else if(st==='surface'&&this.nearCard){G.cardRead=true;P.vel.set(0,0,0);UI.inspect('postcard');}
     else if(this.canPlaceItem())this.placeItem();
   },
   nearPit(){return Math.hypot(P.pos.x-Surface.pitPos.x,P.pos.z-Surface.pitPos.z)<1.75;},
+  canClimb(){return G.state==='surface'&&P.pos.y<-0.12;},
   onTap(x,y){if(UI.inspOpen)return;this.pickAt(new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   onClick(x,y,locked){if(UI.inspOpen)return;this.pickAt(locked?new THREE.Vector2(0,0):new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   pickAt(ndc){
-    if(G.state!=='hut')return;const rc=new THREE.Raycaster();rc.setFromCamera(ndc,camera);rc.far=4;
+    if(G.state!=='hut')return;camera.updateMatrixWorld();const rc=new THREE.Raycaster();rc.setFromCamera(ndc,camera);rc.far=Hut.R*2+0.5;
     const id=Hut.pick(rc);if(id){AU.uiTap();UI.inspect(id);}
   },
   look(){const d=Input.consumeLook();const sens=G.touch?0.0048:0.0022;P.yaw-=d.x*sens;P.pitch=clamp(P.pitch-d.y*sens,-1.45,1.45);},
@@ -2833,7 +2914,7 @@ const Game={
     if(G.bedrockHit&&!this.card&&P.grounded&&P.pos.y>-0.06)this.spawnPostcard();
     this.nearCard=false;
     if(this.card){this.card.sp.material.rotation=t;this.nearCard=P.pos.y>-0.2&&Math.hypot(P.pos.x-this.card.pos.x,P.pos.z-this.card.pos.z)<1.4;}
-    if(P.pos.y<-0.4&&P.grounded)UI.act('올라가기','E');else if(this.nearCard)UI.act('엽서 보기','E');else UI.act(null);
+    if(this.canClimb())UI.act('올라가기','E');else if(this.nearCard)UI.act('엽서 보기','E');else UI.act(null);
     this.muffleT-=dt;if(this.muffleT<=0){this.muffleT=0.4;const under=camera.position.y<-0.02;AU.setMuffle(under,Inner.depthK(P.pos.y));}
     Surface.playerPos.copy(P.pos);Surface.update(dt,t);Inner.update(dt,t,P,camera.position);
   },
@@ -3025,7 +3106,8 @@ const Game={
   tick(dt){
     G.t+=dt;const t=G.t;
     Input.update(dt);
-    if(UI.inspOpen){UI.inspRender(dt);if(this.sceneKey==='hut')Hut.update(dt,t);else Surface.update(dt,t);return;}
+    $('assembleOpen').hidden=G.state!=='hut'||UI.inspOpen||UI.assemblyOpen||Hut.items.length<2;
+    if(UI.inspOpen||UI.assemblyOpen){if(UI.inspOpen)UI.inspRender(dt);if(this.sceneKey==='hut')Hut.update(dt,t);else Surface.update(dt,t);return;}
     const st=G.state;
     if(this.tr)this.updateTransition(dt,t);
     else if(st==='surface')this.updateSurface(dt,t);
@@ -3212,7 +3294,8 @@ const Save={
     const s=this.saved;if(!s)throw Error('no save');this.validate(s);const field=s.field||decodeTerrain(s.terrain),d=s.state,g=d.g;
     TF.set(field);AIRCNT.fill(0);Terrain.deepY=0;
     for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++){const y=TG.y0+j*VS;if(y>=0)continue;for(let i=0;i<TNX;i++)if(TF[TI(i,j,k)]<=0){AIRCNT[i+TNX*j]++;if(Math.hypot(TG.x0+i*VS-PCX,TG.z0+k*VS-PCZ)<R_DIG)Terrain.deepY=Math.min(Terrain.deepY,y);}}
-    Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(999);Terrain.revision=0;
+    const cleared=Terrain.clearDetached();
+    Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(999);Terrain.revision=cleared?1:0;
     [...this.numbers,...this.flags].forEach(k=>G[k]=g[k]);G.pouch=g.pouch.slice();G.got={...g.got};G.age=Math.min(1,G.era/8);
     for(const it of [...Inner.items,...Inner.loose]){SURF.scene.remove(it.mesh);dispose(it.mesh);SURF.scene.remove(it.glint);}Inner.items=[];Inner.loose=[];Inner.falling=[];
     Inner.pool=d.inner.pool.map(p=>p.slice());['poolCd','poolCap','sinceFind','nextFind','tinks'].forEach(k=>Inner[k]=d.inner[k]);
