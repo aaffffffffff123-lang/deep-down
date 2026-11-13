@@ -301,12 +301,12 @@
     <div id="inspRare"></div>
     <div id="inspDesc"></div>
     <p id="assembleIntro" hidden role="status" aria-live="polite"></p>
-    <div id="assembleBar" hidden><button id="attachStart">다른 물건 붙이기</button><button id="detachLast">마지막 조각 떼기</button></div>
+    <div id="assembleBar" hidden><button id="attachStart">붙이기</button><button id="detachLast">떼기</button></div>
     <p id="attachTrayLabel" hidden></p>
     <div id="attachTray" hidden></div>
     <div id="attachTools" hidden>
-      <button id="attachTurn" disabled>조각 옆으로 돌리기</button><button id="attachTilt" disabled>조각 기울이기</button>
-      <button id="attachCancel">붙이기 취소</button><button id="attachConfirm" disabled>조각을 먼저 고르세요</button>
+      <button id="attachTurn" disabled>돌리기</button><button id="attachTilt" disabled>기울이기</button>
+      <button id="attachCancel">취소</button><button id="attachConfirm" disabled>붙이기</button>
     </div>
     <div id="inspectActions"><button id="inspClose">닫기</button></div>
   </div>
@@ -1143,7 +1143,7 @@ const LINES=[
    '자리를 양보하기 싫어서 자는 척한다.','뒷담화에 맞장구쳐 놓고 나는 안 했다고 생각한다.','부고를 들으면 가야 하는 사이인지부터 따진다.','선물 받은 걸 다른 사람에게 다시 선물한다.'],
   ['친한 사람이 잘되면 축하하면서 배가 아프다.','누가 아프다고 하면 얼마나 귀찮아질지부터 생각한다.','남이 망한 이야기를 일부러 찾아 읽는다.','사과하면서 속으로는 내가 맞다고 생각한다.'],
 ];
-const LITTER_LINES=['누가 버린 것.','위에서 떨어진 것.'];
+const LITTER_LINES={potshard:'누가 깨뜨리고 갔다.',fishbone:'누가 발라 먹고 던졌다.',coinold:'누가 흘린 줄도 모르고 갔다.',porcelain:'누가 깨고 발로 밀어 넣었다.',butt:'누가 피우다 튕겼다.',nail:'누가 박다 흘렸다.',glassbit:'누가 마시고 깼다.',capwhite:'누가 따서 던졌다.',snackchoco:'누가 걸어가며 먹고 놓았다.',strawblue:'누가 다 쓰고 뱉었다.',part:'위에서 뭘 고치다 떨어뜨렸다.',chip:'위에서는 이제 안 쓰는 것.'};
 // per-run assignment: lines and positions
 function setupFinds(){
   const finds=[];
@@ -1157,8 +1157,8 @@ function setupFinds(){
   const deepFixed=['cd','capsule'];
   const b2=shuffle(bands[2].filter(id=>!deepFixed.includes(id))),l2=shuffle(LINES[2]);
   b2.forEach((id,i)=>{ITEMS[id].d=l2[i%l2.length];});
-  ITEMS.cd.d='이걸 알아서 뭐가 달라지는지는 모르겠다.';
-  ITEMS.capsule.d='여기까지 와서도 똑같다.';
+  ITEMS.cd.d='위로하면서 속으로는 나는 저 정도는 아니라고 생각한다.';
+  ITEMS.capsule.d='고맙다는 말을 못 들으면 해 준 걸 계속 기억한다.';
   return {b0,b1,b2};
   const place=(ids,y0,y1)=>{const n=ids.length;ids.forEach((id,i)=>{
     const y=lerp(y0,y1,(i+0.5)/n)+mrand(-0.25,0.25);
@@ -1411,7 +1411,7 @@ const SKY_ERA=[
   [0x5fb6f0,0xdcf2ff,0x9ccf7a],[0x5fb6f0,0xdcf2ff,0x9ccf7a],[0x6ab8ec,0xe2f1fb,0x9ccf7a],
   [0x8fa9be,0xe9e1cc,0x9aa78a],[0x5aaee8,0xe4f2fb,0xa9b5a0],[0x54b4ff,0xf6e2ff,0xc8d6e6],
   [0x6a4cf0,0xffb8e6,0xd9c8ff],[0x1f49c8,0x8ff0ff,0xcfe8ff],[0xffe9a0,0xffffff,0xffeaf6],[0x5c8fb9,0xe4edf0,0xa7a597],
-  [0x325d88,0xc7e0ed,0xa7a597],[0x172746,0x98b6cd,0xa7a597],[0x0b1531,0x6f91ae,0xa7a597],
+  [0x4a52b8,0xffb98c,0xb9a58f],[0x7a3fd0,0xffa3d8,0xb39cc4],[0x6fd0e6,0xfff3c8,0x9ccf7a],
 ];
 function makeCloud(s){const g=new THREE.Group();const m=new THREE.MeshLambertMaterial({color:0xffffff,emissive:0xb8c8d8,emissiveIntensity:0.55});
   for(let i=0;i<6;i++){const p=new THREE.Mesh(new THREE.SphereGeometry(rr(6,11)*s,10,8),m);p.position.set(rr(-14,14)*s,rr(-1.5,2.5)*s,rr(-5,5)*s);p.scale.y=0.62;g.add(p);}return batchMeshes(g);}
@@ -1515,7 +1515,7 @@ const Surface={
   buildHorizon(era){
     const H=this.horizonG;dispose(H);H.clear();seed=4242+era*7;
     const hc=new THREE.Color(SKY_ERA[era][1]);
-    if(era>=9){this.buildSkyHorizon(era,H,hc);return;}
+    if(era>=9){if(era<12)this.buildSkyHorizon(era,H,hc);this.lateSky(era,H);return;}
     if(era<=3){
       for(let i=0;i<18;i++){const a=i/18*Math.PI*2+rr(-0.12,0.12);const d=rr(240,330);const r=rr(40,85);
         const c=new THREE.Color(era===3?0x8a9a7a:0x6a9a6a).lerp(hc,rr(0.35,0.6));
@@ -1581,6 +1581,57 @@ const Surface={
     };
     mesh('sky-district-links',new THREE.BoxGeometry(1,1,1),links,0x9bb3c2,(d,o)=>span(d,o,false));
     mesh('sky-district-lights',new THREE.BoxGeometry(1,1,1),links,0xc2edf2,(d,o)=>span(d,o,true),true);
+  },
+  // eras 9+: each stage puts one large, unmistakable thing where the player actually looks
+  lateSky(era,H){
+    const basic=(c,o)=>new THREE.MeshBasicMaterial(Object.assign({color:c,fog:false},o||{}));
+    const add=m=>{m.userData.noInk=true;H.add(m);return m;};
+    // an arc from horizon to horizon: a circle standing on edge, centred below the ground, leaned back
+    const arc=(R,tube,c,yaw,lean,cy,a0,len)=>{const g=new THREE.Group();g.rotation.order='YXZ';g.rotation.set(lean,yaw,0);g.position.y=cy;
+      const m=new THREE.Mesh(new THREE.TorusGeometry(R,tube,6,220,len||Math.PI*2),basic(c));m.rotation.z=a0||0;m.userData.noInk=true;g.add(m);H.add(g);return g;};
+    const lift=(x,z,h,c)=>{const col=add(new THREE.Mesh(new THREE.CylinderGeometry(2.4,3.6,h,8),basic(c)));col.position.set(x,h/2,z);
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(16,44,70,12),new THREE.MeshLambertMaterial({color:0xf2f4f6,emissive:0x8a8f9c,emissiveIntensity:0.35}));base.position.set(x,35,z);H.add(base);
+      for(let i=0;i<5;i++){const car=add(new THREE.Mesh(new THREE.BoxGeometry(11,16,11),basic(i%2?0xfff0b0:0x9ff2ff)));car.position.set(x,0,z);this.climbers.push({m:car,h,ph:i/5,v:(i%2?1:-1)*rr(0.012,0.02)});}};
+    if(era===9){
+      arc(2600,5,0xf4fbff,0.5,0.95,-800,0.35,0.5);
+    }
+    if(era===10){
+      // the ring is still being built: it stops halfway across the sky
+      const g=arc(2600,26,0xfff3d8,0.25,0.8,-800,0.1,Math.PI*0.56);
+      const tip=new THREE.Mesh(new THREE.BoxGeometry(230,90,110),basic(0xffffff));tip.userData.noInk=true;const a=0.1+Math.PI*0.56;tip.position.set(Math.cos(a)*2600,Math.sin(a)*2600,0);tip.rotation.z=a;g.add(tip);
+      for(let i=0;i<9;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(rr(18,40),rr(6,10),rr(8,14)),basic(i%2?0xfff0b0:0xffc9a0));b.userData.noInk=true;const aa=a+0.02+i*0.022;b.position.set(Math.cos(aa)*(2600+rr(-60,60)),Math.sin(aa)*(2600+rr(-60,60)),rr(-60,60));b.rotation.z=aa;g.add(b);}
+      lift(-240,470,3200,0xfff6e0);lift(380,330,3200,0xfff6e0);lift(90,-560,3200,0xfff6e0);
+      const sun=add(new THREE.Mesh(new THREE.SphereGeometry(150,24,16),basic(0xfff1c4)));sun.position.set(-900,150,1500);
+    }
+    if(era===11){
+      arc(2600,30,0xfff0fb,0.25,0.8,-800);arc(2670,7,0x9ff2ff,0.25,0.8,-800);arc(3300,16,0xffd9f2,-0.9,1.0,-1300);
+      lift(-240,470,3200,0xffe9fb);lift(380,330,3200,0xffe9fb);lift(90,-560,3200,0xffe9fb);lift(-520,-180,3200,0xffe9fb);
+      // a wheel-shaped habitat, low in the sky and slowly turning
+      const wheel=new THREE.Group();wheel.position.set(-250,400,640);wheel.lookAt(0,60,0);const spin=new THREE.Group();wheel.add(spin);
+      const body=new THREE.MeshLambertMaterial({color:0xf3f1ff,emissive:0x9a8fd0,emissiveIntensity:0.45});
+      spin.add(new THREE.Mesh(new THREE.TorusGeometry(150,17,10,72),body));
+      const hub=new THREE.Mesh(new THREE.SphereGeometry(30,18,12),body);spin.add(hub);
+      for(let i=0;i<6;i++){const sp=new THREE.Mesh(new THREE.BoxGeometry(150,7,7),body);const a=i/6*Math.PI*2;sp.position.set(Math.cos(a)*75,Math.sin(a)*75,0);sp.rotation.z=a;spin.add(sp);}
+      const win=new THREE.InstancedMesh(new THREE.BoxGeometry(7,5,3),basic(0xfff0a8),96);const d=new THREE.Object3D();
+      for(let i=0;i<96;i++){const a=i/96*Math.PI*2,r=150+((i%3)-1)*8;d.position.set(Math.cos(a)*r,Math.sin(a)*r,17.5);d.rotation.set(0,0,a);d.updateMatrix();win.setMatrixAt(i,d.matrix);}win.userData.noInk=true;spin.add(win);
+      const band=new THREE.Mesh(new THREE.TorusGeometry(168,2.2,5,72),basic(0xff8ae6));band.userData.noInk=true;spin.add(band);
+      H.add(wheel);this.spinners.push({g:spin,s:0.07});
+      const far=new THREE.Group();far.position.set(900,700,-1300);far.lookAt(0,0,0);const fs=new THREE.Group();far.add(fs);fs.add(new THREE.Mesh(new THREE.TorusGeometry(210,20,8,60),body));
+      for(let i=0;i<4;i++){const sp=new THREE.Mesh(new THREE.BoxGeometry(210,8,8),body);const a=i/4*Math.PI*2;sp.position.set(Math.cos(a)*105,Math.sin(a)*105,0);sp.rotation.z=a;fs.add(sp);}H.add(far);this.spinners.push({g:fs,s:-0.05});
+    }
+    if(era===12){
+      // everyone lives up there now: a whole world bent into a band
+      const tex=canvasTex(1024,128,(c,w,h)=>{c.fillStyle='#8fd0ea';c.fillRect(0,0,w,h);
+        for(let i=0;i<70;i++){c.fillStyle=pick(['#a9dc8f','#bfe39a','#8fcf86','#e6e2b4']);c.beginPath();c.ellipse(rr(0,w),rr(14,h-14),rr(14,70),rr(5,22),rr(-0.3,0.3),0,7);c.fill();}
+        for(let i=0;i<110;i++){c.fillStyle='rgba(255,255,255,0.85)';c.beginPath();c.ellipse(rr(0,w),rr(8,h-8),rr(6,34),rr(2,6),0,0,7);c.fill();}
+        for(let i=0;i<420;i++){c.fillStyle=pick(['#fff6c0','#ffffff','#ffd9a0']);c.fillRect(rr(0,w),rr(10,h-10),2,2);}
+        c.fillStyle='#f6fbff';c.fillRect(0,0,w,7);c.fillRect(0,h-7,w,7);},[14,1]);
+      const world=(R,W,yaw,lean,cy,op)=>{const g=new THREE.Group();g.rotation.order='YXZ';g.rotation.set(lean,yaw,0);g.position.y=cy;
+        const m=new THREE.Mesh(new THREE.CylinderGeometry(R,R,W,220,1,true),basic(0xffffff,{map:tex,side:THREE.DoubleSide,transparent:op<1,opacity:op}));m.rotation.x=Math.PI/2;m.userData.noInk=true;g.add(m);
+        [-1,1].forEach(k=>{const e=new THREE.Mesh(new THREE.TorusGeometry(R,W*0.035,5,220),basic(0xffffff));e.position.z=k*W/2;e.userData.noInk=true;g.add(e);});H.add(g);return g;};
+      world(2600,520,0.25,0.8,-800,1);world(3600,300,-1.0,1.05,-1500,0.8);
+      const sun=add(new THREE.Mesh(new THREE.SphereGeometry(130,24,16),basic(0xfffbe0)));sun.position.set(1300,260,1500);
+    }
   },
   // things that hang in the sky of the far future
   skyWorks(era,H){
@@ -1736,10 +1787,10 @@ const Surface={
   buildEra(era){
     this.era=era;
     if(this.props){dispose(this.props);this.props.clear();}
-    this.buildings=[];this.colliders=[];this.smokes.forEach(s=>s.puffs.forEach(p=>SURF.scene.remove(p)));this.smokes=[];this.excavator=null;this.smith=null;this.drones=[];this.floaters=[];this.fireFlame=null;this.skyPeople=[];this.skyBodies=null;this.skyHeads=null;
+    this.buildings=[];this.colliders=[];this.smokes.forEach(s=>s.puffs.forEach(p=>SURF.scene.remove(p)));this.smokes=[];this.excavator=null;this.smith=null;this.drones=[];this.floaters=[];this.climbers=[];this.spinners=[];this.fireFlame=null;this.skyPeople=[];this.skyBodies=null;this.skyHeads=null;
     const P=this.props;seed=777+era*31;
     this.sky.material.dispose();this.sky.material=skyMat(...SKY_ERA[era]);
-    SURF.hemi.color.set(era===3?0xe6e2d6:era===6?0xf2dcff:era===8?0xfff6dc:0xd6efff);SURF.sun.intensity=era===3?1.6:2.0;
+    SURF.hemi.color.set(era===3?0xe6e2d6:era===6?0xf2dcff:era===8?0xfff6dc:era===10?0xffe2c8:era===11?0xf0dcff:0xd6efff);SURF.sun.intensity=era===3?1.6:2.0;
     this.buildHorizon(era);
     const addTrees=(list,s)=>list.forEach(([x,z])=>P.add(this.tree(x,z,s||rr(0.8,1.25))));
     const rm=this.road.material;this.roadLine.visible=false;
@@ -1751,9 +1802,12 @@ const Surface={
     else{rm.color.set(era===6?0x2c2650:era===8?0xfffaf0:0xdde2ea);rm.map=null;this.roadLine.visible=true;this.roadLine.material=mat(0x5ad0ff,{emissive:0x5ad0ff,emissiveIntensity:1});}
     this.road.visible=era<9;if(era>=9)this.roadLine.visible=false;
     rm.needsUpdate=true;
-    this.grass.visible=era<=3;
+    this.grass.visible=era<=3||era===12;
     this.groundMat.color.set(era<=2?0xffffff:era===3?0xd8dcc0:era<=5?0xdfe6d2:era===6?0xb9b4e6:era===7?0xeef4fb:0xfff3d6);this.groundMat.map=era>=6?null:grassTex;this.groundMat.needsUpdate=true;
     if(era>=9){this.groundMat.color.set(0xb7b4a5);this.groundMat.map=dirtTex;this.groundMat.needsUpdate=true;}
+    if(era===12){this.groundMat.color.set(0xffffff);this.groundMat.map=grassTex;this.groundMat.needsUpdate=true;
+      addTrees([[-14,-7],[13,-13],[16,-2],[-16,3],[-10,10],[-19,-13],[22,-6],[14,16]],1.9);addTrees([[7.5,10],[17,9],[3,-15],[-1.5,16],[-23,-2],[0,-20],[5.5,15.5],[-8,-16],[10,5],[-12,-1],[25,10],[-26,12],[8,-22],[-4,22]]);
+      [[-6,1.5,0.6],[7,-10,0.8],[-12,7,0.5],[6,7,0.7]].forEach(([x,z,s])=>P.add(this.rock(x,z,s)));}
     if(era>=2&&era<9){[[3.35],[5.45]].forEach(([z])=>{const curb=box(400,0.14,0.22,era>=4?0xd8d8d0:0x9a968e);curb.position.set(0,0.07,z);curb.castShadow=false;P.add(curb);});}
     if(era===1)P.add(this.fence());
     if(era===0){
@@ -1821,7 +1875,7 @@ const Surface={
         const e=sph(0.05,0x5ad0ff,{emissive:0x5ad0ff,emissiveIntensity:1.2},8,6);e.position.set(0,-0.08,0.15);d.add(e);P.add(d);this.drones.push({g:d,a:rr(0,6),r:rr(5,10),y:rr(3.5,6),s:rr(0.2,0.4)});}
     }
     if(era>=5&&era<9)this.futureExtras(era,P);
-    if(era>=9)this.buildSkyCity(P,era);
+    if(era>=9&&era<12)this.buildSkyCity(P,era);
     if(era>=3&&era<9){const p=this.pitPos;const pts=[[-30,4.2],[-3.5,1.4],[p.x-0.9,p.z+2.3],[p.x+1.6,p.z+2.4],[5,1.6],[30,4.2]];const col=era===3?0x6a6a6a:era===4?0x8a8d93:era===6?0x4a3f86:0xdfe3ea;
       for(let i=1;i<pts.length;i++){const [x1,z1]=pts[i-1],[x2,z2]=pts[i];const len=Math.hypot(x2-x1,z2-z1);const seg=new THREE.Mesh(new THREE.PlaneGeometry(len+0.6,0.95),mat(col,{roughness:0.9}));seg.rotation.x=-Math.PI/2;seg.rotation.z=-Math.atan2(z2-z1,x2-x1);seg.position.set((x1+x2)/2,0.014,(z1+z2)/2);seg.receiveShadow=true;P.add(seg);}}
     {const skip=new Set();if(this.sitter)skip.add(this.sitter.root);if(this.smith)skip.add(this.smith.root);if(this.excavator)skip.add(this.excavator.arm);if(this.fireFlame)skip.add(this.fireFlame);this.drones.forEach(d=>skip.add(d.g));this.floaters.forEach(f=>skip.add(f.g));batchMeshes(P,skip);}
@@ -1851,7 +1905,7 @@ const Surface={
   pathLen(p){let L=0;for(let i=1;i<p.length;i++)L+=p[i].distanceTo(p[i-1]);return L;},
   posOnPath(p,d,out,dirOut){let acc=0;for(let i=1;i<p.length;i++){const L=p[i].distanceTo(p[i-1]);if(d<=acc+L||i===p.length-1){const t=clamp((d-acc)/L,0,1);out.copy(p[i-1]).lerp(p[i],t);if(dirOut)dirOut.copy(p[i]).sub(p[i-1]).normalize();return d>=acc+L&&i===p.length-1;}acc+=L;}return true;},
   spawnVehicle(prefill){
-    const era=this.era;let kind;
+    const era=this.era;let kind;if(era>=12)return;
     if(era>=9)kind='flycar';else if(era<=2)kind='cart';else if(era===3)kind='truck';else if(era===4)kind='car';else kind=rnd()<0.6?'flycar':'pod';
     const v=makeVehicle(kind);const dir=rnd()<0.5?1:-1;
     v.dir=dir;v.z=kind==='flycar'?rr(this.era>=6?-26:-4,this.era>=6?26:10):(dir>0?3.85:4.95);v.y=kind==='flycar'?rr(3.5,this.era>=6?34:8):(kind==='pod'?0.25:0);
@@ -1890,6 +1944,7 @@ const Surface={
     if(this.sitter){animPerson(this.sitter,dt,t);this.sitter.headG.rotation.y=Math.sin(t*0.4)*0.3;}
     if(this.fireFlame){this.fireFlame.scale.set(1+Math.sin(t*13)*0.12,1+Math.sin(t*9.3)*0.2,1);}
     (this.floaters||[]).forEach(f=>{f.g.position.y=f.y0+Math.sin(t*0.5+f.ph)*0.5;if(f.s)f.g.rotation.y+=dt*f.s;});
+    (this.climbers||[]).forEach(c=>{c.m.position.y=(((c.ph+t*c.v)%1)+1)%1*c.h;});(this.spinners||[]).forEach(sp=>{sp.g.rotation.z+=dt*sp.s;});
     (this.drones||[]).forEach(d=>{d.a+=dt*d.s;d.g.position.set(this.pitPos.x+Math.cos(d.a)*d.r,d.y+Math.sin(t*1.3+d.a)*0.3,this.pitPos.z+Math.sin(d.a)*d.r*0.6);d.g.rotation.y=-d.a;});
     this.clouds.forEach((c,i)=>{c.position.x+=dt*(0.6+i%3*0.2);if(c.position.x>560)c.position.x=-560;});
     if(this.rain){const pos=this.rain.geometry.attributes.position;const a=pos.array;
@@ -2353,12 +2408,13 @@ const Inner={
   },
   impact(o,d,P){
     this.updateTarget(o,d);const T=this.target;
-    if(!T.hit){AU.swing(G.tool);return 'air';}
+    if(!T.hit){AU.swing(G.tool);this.airN=(this.airN||0)+1;if(this.airN>=3&&P.pos.y>-0.12&&(!this.airT||G.t-this.airT>8)){this.airT=G.t;UI.hint('흙에 손이 안 닿는다. 발밑을 내려다보세요.',3200);}return 'air';}this.airN=0;
     const p=T.p;const si=Math.min(T.si,5);
     if(T.block==='bed'){AU.clank();this.sparks(p,T.n);G.shake=1.0;if(!G.bedrockHit){G.bedrockHit=true;UI.hint('더는 파지지 않는다.',3500);}return 'bed';}
     if(T.block==='hard'){AU.tink();this.puff(p,0x9a8a7a,2);G.shake=0.25;if(!this.hardT||G.t-this.hardT>6){this.hardT=G.t;UI.hint('여기는 안 파진다. 움집 앞마당 가운데 흙만 파진다.',3200);}return 'hard';}
     if(T.block==='tool'){
       AU.tink();this.puff(p,STRATA[T.si].col2,2);G.shake=0.3;this.tinks++;
+      if(G.tool<2&&this.tinks>=3&&(!this.toolHintT||G.t-this.toolHintT>10)){this.toolHintT=G.t;UI.hint(G.tool===0?'맨손으로는 안 파진다. 근처에 나뭇가지가 박혀 있다.':'나뭇가지로는 안 파진다. 점토 속에 돌이 묻혀 있다.',4200);}
       if(G.tool===2&&T.si>=3&&this.tinks>=2&&!G.sandHint){G.sandHint=true;UI.hint('움집에서 돌과 나뭇가지를 묶을 수 있다.',5000);}
       return 'tool';
     }
@@ -2659,8 +2715,10 @@ const Input={
     window.addEventListener('keyup',e=>{this.keys[e.code]=false;});
     window.addEventListener('blur',()=>{this.keys={};this.release();});
     const dig=$('dig');
-    const dOn=e=>{e.preventDefault();if(!this.enabled||G.state!=='surface')return;this.digBtn=true;dig.classList.add('on');try{dig.setPointerCapture(e.pointerId);}catch(err){}};
-    const dOff=()=>{this.digBtn=false;dig.classList.remove('on');};
+    let digLast=null;
+    const dOn=e=>{e.preventDefault();if(!this.enabled||G.state!=='surface')return;this.digBtn=true;digLast={id:e.pointerId,x:e.clientX,y:e.clientY};dig.classList.add('on');try{dig.setPointerCapture(e.pointerId);}catch(err){}};
+    const dOff=()=>{this.digBtn=false;digLast=null;dig.classList.remove('on');};
+    dig.addEventListener('pointermove',e=>{if(!this.digBtn||!digLast||digLast.id!==e.pointerId||!this.enabled)return;this.lookDX+=e.clientX-digLast.x;this.lookDY+=e.clientY-digLast.y;digLast.x=e.clientX;digLast.y=e.clientY;});
     dig.addEventListener('pointerdown',dOn);dig.addEventListener('pointerup',dOff);dig.addEventListener('pointercancel',dOff);dig.addEventListener('lostpointercapture',dOff);
     dig.addEventListener('contextmenu',e=>e.preventDefault());
   },
@@ -2704,7 +2762,7 @@ const UI={
     el.querySelector('img').src=it.icon||'';el.querySelector('.nm').textContent=it.name;
     const tr=el.querySelector('.tr');
     if(isTool){tr.style.display='none';}else{tr.style.display='';tr.textContent=RARE_LABEL[it.r||1];tr.className='tr'+(it.r===2?' r2':it.r===3?' r3':'');}
-    el.querySelector('.tl').textContent=litter?pick(LITTER_LINES):(it.d||'');
+    el.querySelector('.tl').textContent=it.litter?(LITTER_LINES[id]||''):(it.d||'');
     el.classList.add('show');if(this.toastT)clearTimeout(this.toastT);
     this.toastT=setTimeout(()=>el.classList.remove('show'),isTool?3200:3400);
   },
@@ -2757,12 +2815,12 @@ const UI={
     $('insp').classList.toggle('working',!!this.inspItem);$('insp').classList.toggle('assembling',this.attachMode);
     $('inspName').textContent=quiet?'':it.name;$('inspName').hidden=!!quiet;
     const r=$('inspRare');r.style.display=quiet||it.tool||it.special?'none':'';r.textContent=RARE_LABEL[it.r||1];r.className=it.r===2?'r2':it.r===3?'r3':'';
-    $('inspDesc').textContent=quiet?'':(it.litter?'누가 버린 것.':(it.d||''));$('inspDesc').hidden=!!quiet;
+    $('inspDesc').textContent=quiet?'':(it.litter?(LITTER_LINES[this.inspId]||''):(it.d||''));$('inspDesc').hidden=!!quiet;
     const candidates=this.attachCandidates();
     $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;
-    for(const id of ['attachGuide','attachSelection','attachGesture','attachTrayLabel'])$(id).hidden=!this.attachMode;
-    $('attachPreview').hidden=true;$('assembleIntro').hidden=!this.inspItem||this.attachMode;
-    $('attachStart').disabled=candidates.length===0;$('attachStart').textContent=joined?'더 붙이기':'다른 물건 붙이기';$('detachLast').hidden=!joined;$('detachLast').disabled=!joined;
+    for(const id of ['attachGuide','attachSelection','attachGesture','attachTrayLabel'])$(id).hidden=true;
+    $('attachPreview').hidden=true;$('assembleIntro').hidden=true;
+    $('attachStart').disabled=candidates.length===0;$('attachStart').textContent=joined?'더 붙이기':'붙이기';$('detachLast').hidden=!joined;$('detachLast').disabled=!joined;
     $('assembleIntro').textContent=this.assemblyNotice||(candidates.length?'「다른 물건 붙이기」에서 조각을 고르고,\n이 물건의 원하는 자리에 붙일 수 있어요.':joined?'붙일 낱개 물건이 없어요. 마지막 조각을 떼거나\n집에 다른 물건을 더 놓아 주세요.':'붙일 물건이 하나 더 필요해요.\n집에 물건을 하나 더 놓은 뒤 다시 눌러주세요.');
     if(joined&&candidates.length&&!this.assemblyNotice)$('assembleIntro').textContent='「더 붙이기」로 조각을 더 붙일 수 있어요.\n「마지막 조각 떼기」로 하나씩 되돌릴 수 있어요.';
     if(this.attachMode){$('attachBaseName').textContent='바탕: '+this.assemblyName(this.inspItem);$('attachGesture').textContent=G.touch?'드래그로 돌려보기 · 톡 눌러 위치 선택':'드래그로 돌려보기 · 클릭으로 위치 선택';this.attachGuide();}
@@ -2795,7 +2853,7 @@ const UI={
     $('attachHelp').textContent=message||(!p?'아래 목록에서 조각 하나를 고르세요.\n집에 놓은 낱개 물건들이에요.':ready?'반투명한 조각은 아직 미리보기예요.\n다른 자리를 눌러 바꾸거나 「여기에 붙이기」를 누르세요.':G.touch?'큰 물건의 표면을 손가락으로 톡 눌러주세요.\n드래그하면 뒷면도 돌려볼 수 있어요.':'큰 물건의 표면을 클릭해 주세요.\n드래그하면 뒷면도 돌려볼 수 있어요.');
     $('attachHelp').classList.toggle('miss',!!message);
     $('attachTrayLabel').textContent=p?'선택한 조각: '+ITEMS[p.source.id].name:'붙일 조각'+(this.attachCandidates().length>3?' · 옆으로 밀어서 더 보기':'');
-    $('attachPreview').hidden=!ready;$('attachConfirm').disabled=!ready;$('attachConfirm').textContent=ready?'여기에 붙이기':p?'위치를 먼저 고르세요':'조각을 먼저 고르세요';
+    $('attachPreview').hidden=true;$('attachConfirm').disabled=!ready;$('attachConfirm').textContent='붙이기';
     $('attachTurn').disabled=$('attachTilt').disabled=!ready;
   },
   clearGhost(){if(this.pendingAttach){const g=this.pendingAttach.g;g.parent?.remove(g);Assemblage.release(g);}this.pendingAttach=null;},
@@ -2895,7 +2953,7 @@ const Game={
     this.playerModel=makePerson({hairStyle:'lines',pouch:true,skin:PLAYER_SKIN,hair:0x1a1a1a,top:PLAYER_TOP,bottom:0x7f5a36,ageLines:true});
     this.playerModel.root.visible=false;SURF.scene.add(this.playerModel.root);
     Surface.buildEra(0);
-    const dx=Surface.pitPos.x-P.pos.x,dz=Surface.pitPos.z-P.pos.z;P.yaw=Math.atan2(-dx,-dz);P.pitch=-0.62;
+    const dx=Surface.pitPos.x-P.pos.x,dz=Surface.pitPos.z-P.pos.z;P.yaw=Math.atan2(-dx,-dz);P.pitch=-1.05;
     UI.pouch();
     Save.init();
     $('startBtn').addEventListener('click',()=>this.launch());
@@ -3014,7 +3072,7 @@ const Game={
   afterDig(){
     G.maxDepth=Math.max(G.maxDepth,-Terrain.deepY);
     if(G.era>=1&&G.digs%96===0)Inner.spawnLitter(G.era);
-    if(G.era<LAST_ERA&&P.pitch<-0.5&&G.digs-(this.lastEraDig||0)>=eraDigInterval(G.era)){
+    if(G.era<LAST_ERA&&Math.tan(camera.fov*DEG/2)*Math.cos(P.pitch)+Math.sin(P.pitch)<-0.25&&G.digs-(this.lastEraDig||0)>=eraDigInterval(G.era)){
       this.lastEraDig=G.digs;G.era++;G.maxEra=G.era;G.surfacings++;G.age=Math.min(1,G.era/8);
       View.setAge(G.age);setAge(this.playerModel,G.age);P.eye=1.15-0.15*G.age;P.speedK=1-0.25*G.age;
       Surface.buildEra(G.era);AU.startAmb(G.era,1.5);Inner.spawnLitter(G.era);
