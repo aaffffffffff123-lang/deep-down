@@ -151,6 +151,58 @@
   #assemblyList button{min-height:106px;display:flex;flex-direction:column;align-items:center;gap:5px;}
   #assemblyList img{width:64px;height:64px;object-fit:contain;pointer-events:none;}
   #assemblyClose{min-width:130px;min-height:44px;}
+  .assemblySteps{display:flex;gap:6px;justify-content:center;font-size:13px;font-weight:700;}
+  .assemblySteps span{padding:5px 9px;border:1px solid #d3bc99;border-radius:5px;color:#79674f;background:#f1ead8;}
+  .assemblySteps span.active{background:#ffe45c;border:2px solid #1c1009;color:#1c1009;padding:4px 8px;}
+  #assemblyLead,#assemblyEmpty{margin:0;max-width:440px;font-size:15px;line-height:1.55;text-align:center;white-space:pre-line;}
+  #assemblyEmpty{padding:24px 18px;background:#fff0cd;border:2px dashed #b39361;border-radius:8px;}
+  #assemblyPicker{gap:12px;}
+  #assemblyPicker h2{text-align:center;line-height:1.4;}
+  #attachGuide{width:min(100%,460px);text-align:center;}
+  #attachTitle{margin:9px 0 5px;font-size:20px;line-height:1.3;color:#1c1009;}
+  #attachHelp{margin:0;min-height:40px;font-size:14px;line-height:1.45;white-space:pre-line;}
+  #attachHelp.miss{color:#a23d14;font-weight:700;}
+  #inspectViewport{position:relative;flex-shrink:0;}
+  #inspc{display:block;}
+  #attachPreview{position:absolute;top:8px;left:8px;border:2px solid #1c1009;border-radius:4px;background:#ffe45c;padding:4px 8px;font-size:12px;font-weight:700;pointer-events:none;}
+  #attachSelection{display:flex;align-items:center;justify-content:space-between;gap:8px;width:min(100%,420px);font-size:13px;color:#5a3d1e;}
+  #attachBack{flex-shrink:0;min-height:36px;padding:5px 9px;border:1px solid #a58b69;background:#fffdf6;border-radius:5px;color:#5a3d1e;font-family:inherit;cursor:pointer;}
+  #attachGesture{margin:0;font-size:13px;color:#705c42;text-align:center;}
+  #attachTrayLabel{margin:2px 0 0;width:min(100%,420px);font-size:14px;font-weight:700;}
+  #attachTray{width:min(100%,420px);gap:6px;padding:4px 2px 7px;}
+  #attachTray button{flex:0 0 86px;height:auto;min-height:84px;padding:5px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  #attachTray img{width:48px;height:48px;}
+  #attachTray button span{font-family:inherit;font-size:11px;line-height:1.25;word-break:keep-all;}
+  #attachTray button.selected{background:#ffe99a;border-color:#1c1009;}
+  #attachTools{width:min(100%,420px);display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  #attachTools button{border:2px solid #1c1009;border-radius:6px;min-height:42px;padding:8px 6px;font-size:14px;}
+  #attachConfirm{background:#ffe45c !important;font-weight:800 !important;}
+  #attachConfirm:disabled{background:#eee5d5 !important;}
+  #attachConfirm:not(:disabled){box-shadow:2px 3px 0 #1c1009;}
+  #assembleIntro{max-width:420px;font-size:14px;line-height:1.5;text-align:center;white-space:pre-line;margin:0;}
+  #assembleBar button{border-radius:6px;border-color:#1c1009;}
+  #attachStart{background:#ffe45c !important;}
+  #attachGuide[hidden],#attachSelection[hidden],#attachGesture[hidden],#attachTrayLabel[hidden],#attachPreview[hidden],#assembleIntro[hidden],#assemblyEmpty[hidden],#assemblyList[hidden],#detachLast[hidden]{display:none;}
+  #insp.assembling{gap:7px;padding:12px 18px;}
+  #insp.assembling #inspc{width:min(70vw,300px,26dvh);height:min(70vw,300px,26dvh);}
+  #insp.assembling #inspectActions{display:none;}
+  @media (min-aspect-ratio:4/3) and (max-height:600px){
+    #insp.assembling{display:grid;grid-template-columns:minmax(180px,1fr) minmax(270px,1.3fr);grid-template-rows:auto auto auto auto;align-content:start;justify-items:center;gap:6px 20px;padding:10px 20px;}
+    #attachGuide{grid-column:1/-1;max-width:none;}
+    #attachGuide .assemblySteps{display:none;}
+    #attachTitle{margin:5px 0 3px;font-size:18px;}
+    #attachHelp{min-height:0;font-size:13px;}
+    #insp.assembling #inspectViewport{grid-column:1;grid-row:2/5;}
+    #insp.assembling #inspc{width:min(30vw,46dvh);height:min(30vw,46dvh);}
+    #attachGesture{grid-column:1;grid-row:5;}
+    #attachSelection{grid-column:2;grid-row:2;}
+    #attachTrayLabel{grid-column:2;grid-row:3;}
+    #attachTray{grid-column:2;grid-row:4;margin:0;}
+    #attachTray img{width:40px;height:40px;}
+    #attachTray button{min-height:74px;}
+    #attachTools{grid-column:2;grid-row:5;}
+    #attachTools button{min-height:42px;padding:5px;}
+  }
   #inspName{font-size:26px;font-weight:800;margin-top:6px;}
   #inspRare{font-size:14px;padding:4px 12px;border-radius:14px;background:var(--cream2);border:2px solid var(--line);color:var(--brown2);font-weight:700;}
   #inspRare.r2{background:#dff1ff;border-color:#9fd0ff;color:#2d5f8a}
@@ -210,6 +262,42 @@
   #flipPostcard{margin-top:8px;min-height:48px;padding:12px 28px;border:3px solid #1c1009;border-radius:6px;background:#fffdf6;color:#1c1009;box-shadow:4px 4px 0 #1c1009;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;}
   #flipPostcard[hidden]{display:none;}
   #flipPostcard:active{transform:translateY(2px);box-shadow:2px 2px 0 #1c1009;}
+  /* Keep navigation and inventory at the top; thumb controls share one baseline. */
+  #pouch{left:auto !important;right:calc(12px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));transform:none !important;gap:5px;padding:6px;border-width:2px !important;box-shadow:2px 3px 0 #1c1009 !important;}
+  #pouch .slot{width:34px;height:34px;border-width:2px !important;}
+  #pouch .slot img{width:30px;height:30px;}
+  #pouch.shake{animation:pouchNudge .35s;}
+  @keyframes pouchNudge{0%,100%{margin-right:0}25%,75%{margin-right:4px}50%{margin-right:-4px}}
+  #toast{top:calc(70px + env(safe-area-inset-top)) !important;left:auto !important;right:calc(12px + env(safe-area-inset-right));transform:translateY(-6px) !important;width:max-content;max-width:min(340px,calc(100vw - 24px)) !important;gap:9px;padding:8px 11px 8px 8px;border-width:2px !important;box-shadow:2px 3px 0 #1c1009 !important;}
+  #toast.show{transform:none !important;}
+  #toast img{width:42px;height:42px;}
+  #toast .tn{font-size:14px;gap:5px;}
+  #toast .tl{font-size:13px;}
+  #toast .tr{font-size:10px;padding:2px 5px;}
+  #hint{top:calc(72px + env(safe-area-inset-top)) !important;left:50% !important;transform:translateX(-50%) !important;max-width:min(340px,calc(100vw - 24px)) !important;font-size:13px;padding:7px 10px;border-width:1px !important;box-shadow:none !important;}
+  #toast.show ~ #hint{top:calc(72px + env(safe-area-inset-top)) !important;opacity:0 !important;}
+  #controls{position:fixed;right:calc(12px + env(safe-area-inset-right));bottom:calc(26px + env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:10px;pointer-events:none;}
+  #controls[hidden]{display:none;}
+  #controls > button{pointer-events:auto;}
+  #controls #act,#controls #assembleOpen,#controls #dig{position:static !important;left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;transform:none !important;border-width:2px !important;border-radius:8px !important;box-shadow:2px 3px 0 #1c1009 !important;}
+  #controls #act,#controls #assembleOpen{min-width:104px !important;min-height:52px;padding:11px 12px !important;font-size:16px !important;}
+  #controls #dig{width:84px;height:84px;min-width:84px;padding:0;font-size:18px;order:2;}
+  #controls #act{order:1;}
+  #controls #assembleOpen{order:1;background:#f1ead8;}
+  #controls.hut #act{order:2;background:#ffe9a6 !important;}
+  #controls.hut #act:not(.show){display:block;visibility:hidden;pointer-events:none;}
+  #controls #act:active,#controls #assembleOpen:active,#controls #dig.on{transform:translateY(2px) !important;box-shadow:none !important;}
+  #joy{left:calc(16px + env(safe-area-inset-left)) !important;top:auto !important;bottom:calc(26px + env(safe-area-inset-bottom));transform:none;width:100px;height:100px;border:2px solid rgba(255,253,246,.65);background:rgba(58,38,20,.12);}
+  #joy.ready{display:block;}
+  #joyk{width:42px;height:42px;opacity:.7;border-width:2px;box-shadow:none;}
+  #joy > span{position:absolute;left:0;right:0;bottom:-20px;text-align:center;font-size:12px;color:#fffdf6;text-shadow:0 1px 3px #1c1009;}
+  #insp,#assemblyPicker{z-index:16;background:#fffdf6 !important;}
+  @media (max-width:340px){
+    #joy{left:12px !important;width:88px;height:88px;}
+    #controls{gap:8px;}
+    #controls #act,#controls #assembleOpen{min-width:96px !important;}
+    #controls #dig{min-width:78px;width:78px;height:78px;}
+  }
 </style>
 </head>
 <body>
@@ -221,26 +309,34 @@
   <div id="hint"></div>
   <div id="cross"></div>
   <div id="mm"><canvas id="mmc"></canvas></div>
-  <div id="joy"><div id="joyk"></div></div>
-  <button id="act"></button>
-  <button id="dig">파기</button>
-  <button id="assembleOpen" hidden>붙이기</button>
+  <div id="joy" aria-label="이동 조이스틱"><div id="joyk"></div><span>이동</span></div>
+  <div id="controls"><button id="assembleOpen" hidden>붙이기</button><button id="act"></button><button id="dig">파기</button></div>
   <div id="fade"></div>
   <div id="assemblyPicker" hidden role="dialog" aria-modal="true" aria-labelledby="assemblyTitle">
-    <h2 id="assemblyTitle">붙일 물건 고르기</h2>
+    <div class="assemblySteps"><span class="active">1 바탕</span><span>2 조각</span><span>3 위치·붙이기</span></div>
+    <h2 id="assemblyTitle">1. 바탕이 될 물건을 고르세요</h2>
+    <p id="assemblyLead">고른 물건 위에 다른 조각을 붙일 거예요.</p>
+    <p id="assemblyEmpty" hidden></p>
     <div id="assemblyList"></div><button id="assemblyClose">닫기</button>
   </div>
   <div id="insp">
-    <canvas id="inspc"></canvas>
+    <div id="attachGuide" hidden>
+      <div class="assemblySteps"><span>1 바탕</span><span id="attachStep2">2 조각</span><span id="attachStep3">3 위치·붙이기</span></div>
+      <h2 id="attachTitle"></h2><p id="attachHelp" role="status" aria-live="polite"></p>
+    </div>
+    <div id="inspectViewport"><canvas id="inspc"></canvas><span id="attachPreview" hidden>미리보기 · 아직 안 붙였어요</span></div>
+    <p id="attachGesture" hidden></p>
+    <div id="attachSelection" hidden><span id="attachBaseName"></span><button id="attachBack">바탕 바꾸기</button></div>
     <div id="inspName"></div>
     <div id="inspRare"></div>
     <div id="inspDesc"></div>
-    <div id="assembleBar" hidden><button id="attachStart">붙이기</button><button id="detachLast">떼기</button></div>
-    <div id="attachHelp" hidden></div>
+    <p id="assembleIntro" hidden role="status" aria-live="polite"></p>
+    <div id="assembleBar" hidden><button id="attachStart">다른 물건 붙이기</button><button id="detachLast">마지막 조각 떼기</button></div>
+    <p id="attachTrayLabel" hidden></p>
     <div id="attachTray" hidden></div>
     <div id="attachTools" hidden>
-      <button id="attachTurn" aria-label="붙일 물건 옆으로 돌리기">↻</button><button id="attachTilt" aria-label="붙일 물건 기울이기">↷</button>
-      <button id="attachConfirm" disabled>붙일 곳 선택</button><button id="attachCancel">취소</button>
+      <button id="attachTurn" disabled>조각 옆으로 돌리기</button><button id="attachTilt" disabled>조각 기울이기</button>
+      <button id="attachCancel">붙이기 취소</button><button id="attachConfirm" disabled>조각을 먼저 고르세요</button>
     </div>
     <div id="inspectActions"><button id="flipPostcard" hidden>뒤집기</button><button id="inspClose">닫기</button></div>
   </div>
@@ -250,7 +346,7 @@
     <button id="startBtn" class="btn">시작</button>
     <button id="newGameBtn" class="btn" hidden>새로 시작</button>
     <p id="saveNote" role="status" hidden></p>
-    <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 화면으로 이동 · 오른쪽 화면으로 둘러보기</div>
+    <div class="hint">PC: WASD 이동 · 마우스로 둘러보기 · 왼쪽 버튼 누르고 있으면 파기<br>폰: 왼쪽 아래로 이동 · 화면을 밀어 둘러보기</div>
   </div>
   <div id="end" class="card">
     <h1>침잠하기</h1>
@@ -1017,10 +1113,7 @@ function drawPostcard(){
     for(let i=0;i<60;i++){c.fillStyle=`rgba(${120+Math.random()*40},${90+Math.random()*30},40,${0.05+Math.random()*0.1})`;c.beginPath();c.ellipse(Math.random()*600,Math.random()*400,10+Math.random()*50,6+Math.random()*30,Math.random()*3,0,7);c.fill();}
     c.strokeStyle='rgba(90,60,30,0.5)';c.lineWidth=2;for(let i=0;i<5;i++){c.beginPath();const y=Math.random()*400;c.moveTo(0,y);c.lineTo(600,y+(Math.random()-0.5)*60);c.stroke();}
     c.strokeStyle='#1c1009';c.lineWidth=6;c.strokeRect(5,5,590,390);return c;};
-  const font=(px)=>`${px}px "Nanum Pen Script","Gaegu","Apple SD Gothic Neo","Malgun Gothic",sans-serif`;
-  let c=paper(CARD.front);c.fillStyle='#22160c';c.textAlign='center';c.textBaseline='middle';c.font=font(64);
-  c.fillText('우와 넌 너에 대해',300,160);c.fillText('정말 잘 아는구나..',300,245);
-  c=paper(CARD.back);c.fillStyle='#22160c';c.textAlign='center';c.textBaseline='middle';c.font=font(84);c.fillText('쓸데없이',300,200);
+  paper(CARD.front);paper(CARD.back);
   if(CARD.ft){CARD.ft.needsUpdate=true;CARD.bt.needsUpdate=true;}
 }
 function makePostcard(){
@@ -2518,8 +2611,9 @@ const Input={
       if(!this.enabled)return;
       if(isTouch(e)){
         if(!G.touch){G.touch=true;UI.touchMode();}
-        if(e.clientX<window.innerWidth*0.45&&this.stickId===null){
-          this.stickId=e.pointerId;this.stickO={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};joy.style.display='block';joy.style.left=e.clientX+'px';joy.style.top=e.clientY+'px';knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);
+        const jr=joy.getBoundingClientRect(),jx=jr.left+jr.width/2,jy=jr.top+jr.height/2;
+        if(Math.hypot(e.clientX-jx,e.clientY-jy)<jr.width*0.7&&this.stickId===null){
+          this.stickId=e.pointerId;this.stickO={x:jx,y:jy};this.moveStick(e.clientX,e.clientY);
         }else if(this.lookId===null){this.lookId=e.pointerId;this.lookLast={x:e.clientX,y:e.clientY};this.down={x:e.clientX,y:e.clientY,t:performance.now(),moved:false};}
         try{canvas.setPointerCapture(e.pointerId);}catch(err){}
       }else{
@@ -2531,12 +2625,7 @@ const Input={
     canvas.addEventListener('pointermove',e=>{
       if(isTouch(e)){
         if(e.pointerId===this.stickId&&this.stickO){
-          let dx=e.clientX-this.stickO.x,dy=e.clientY-this.stickO.y;const R=50;const d=Math.hypot(dx,dy);
-          if(d>10)this.stickO.moved=true;
-          if(d>R){dx*=R/d;dy*=R/d;}
-          knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-          const m=Math.hypot(dx,dy)/R;const dead=0.12;const k=m<dead?0:Math.min(1,(m-dead)/(1-dead));
-          if(m>0)this.raw.set(dx/(m*R)*k,dy/(m*R)*k);else this.raw.set(0,0);
+          this.moveStick(e.clientX,e.clientY);
         }else if(e.pointerId===this.lookId&&this.lookLast){
           this.lookDX+=e.clientX-this.lookLast.x;this.lookDY+=e.clientY-this.lookLast.y;this.lookLast={x:e.clientX,y:e.clientY};
           if(this.down&&Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>10)this.down.moved=true;
@@ -2549,7 +2638,7 @@ const Input={
     document.addEventListener('mousemove',e=>{if(this.locked&&this.enabled){this.lookDX+=e.movementX;this.lookDY+=e.movementY;}});
     const up=e=>{
       if(isTouch(e)){
-        if(e.pointerId===this.stickId){const tap=this.stickO;this.stickId=null;this.stickO=null;joy.style.display='none';this.raw.set(0,0);if(e.type!=='pointercancel'&&tap&&!tap.moved&&performance.now()-tap.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);}
+        if(e.pointerId===this.stickId){this.stickId=null;this.stickO=null;knob.style.transform='translate(-50%,-50%)';this.raw.set(0,0);}
         if(e.pointerId===this.lookId){this.lookId=null;this.lookLast=null;if(e.type!=='pointercancel'&&this.down&&!this.down.moved&&performance.now()-this.down.t<320&&this.tapCb)this.tapCb(e.clientX,e.clientY);this.down=null;}
       }else{
         if(e.button===0){this.mouseDig=false;if(this.mdown&&!this.mdown.moved&&performance.now()-this.mdown.t<350&&this.clickCb)this.clickCb(e.clientX,e.clientY,this.locked);this.mdown=null;}
@@ -2565,12 +2654,18 @@ const Input={
       this.keys[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(this.keyCb)this.keyCb(e.code);});
     window.addEventListener('keyup',e=>{this.keys[e.code]=false;});
-    window.addEventListener('blur',()=>{this.keys={};this.digBtn=false;this.mouseDig=false;$('dig').classList.remove('on');});
+    window.addEventListener('blur',()=>{this.keys={};this.release();});
     const dig=$('dig');
-    const dOn=e=>{e.preventDefault();this.digBtn=true;dig.classList.add('on');try{dig.setPointerCapture(e.pointerId);}catch(err){}};
+    const dOn=e=>{e.preventDefault();if(!this.enabled||G.state!=='surface')return;this.digBtn=true;dig.classList.add('on');try{dig.setPointerCapture(e.pointerId);}catch(err){}};
     const dOff=()=>{this.digBtn=false;dig.classList.remove('on');};
     dig.addEventListener('pointerdown',dOn);dig.addEventListener('pointerup',dOff);dig.addEventListener('pointercancel',dOff);dig.addEventListener('lostpointercapture',dOff);
     dig.addEventListener('contextmenu',e=>e.preventDefault());
+  },
+  moveStick(x,y){
+    let dx=x-this.stickO.x,dy=y-this.stickO.y;const R=34,d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d;}
+    $('joyk').style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    const m=Math.hypot(dx,dy)/R,k=m<0.12?0:Math.min(1,(m-0.12)/0.88);
+    if(m>0)this.raw.set(dx/(m*R)*k,dy/(m*R)*k);else this.raw.set(0,0);
   },
   update(dt){
     let kx=0,ky=0;
@@ -2584,12 +2679,16 @@ const Input={
   },
   consumeLook(){const d={x:this.lookDX,y:this.lookDY};this.lookDX=0;this.lookDY=0;return d;},
   digHeld(){return this.digBtn||this.mouseDig||!!this.keys.KeyF;},
-  release(){this.stickId=null;this.stickO=null;this.lookId=null;this.lookLast=null;$('joy').style.display='none';this.raw.set(0,0);this.move.set(0,0);this.digBtn=false;this.mouseDig=false;$('dig').classList.remove('on');this.lookDX=0;this.lookDY=0;},
+  release(){this.stickId=null;this.stickO=null;this.lookId=null;this.lookLast=null;$('joyk').style.transform='translate(-50%,-50%)';this.raw.set(0,0);this.move.set(0,0);this.digBtn=false;this.mouseDig=false;$('dig').classList.remove('on');this.lookDX=0;this.lookDY=0;},
 };
 
 // ---------- UI ----------
 const UI={
   lastPouch:0, hintT:null, toastT:null,
+  controls(){
+    const active=['surface','hut'].includes(G.state)&&Input.enabled&&!this.inspOpen&&!this.assemblyOpen;
+    $('controls').hidden=!active;$('controls').classList.toggle('hut',G.state==='hut');$('joy').classList.toggle('ready',active&&G.touch);
+  },
   pouch(pop){
     const el=$('pouch');let html='';
     for(let i=0;i<POUCH;i++){const id=G.pouch[i];html+=`<div class="slot ${id?'filled':''} ${pop&&i===G.pouch.length-1&&G.pouch.length>this.lastPouch?'pop':''}">${id?`<img src="${ITEMS[id].icon||''}" alt="">`:''}</div>`;}
@@ -2614,22 +2713,28 @@ const UI={
   cross(on){$('cross').classList.toggle('show',!!on);},
   minimap(on,wide){const m=$('mm');m.classList.toggle('show',!!on);m.classList.toggle('wide',!!wide);},
   fade(on,dur,color){const f=$('fade');if(color)f.style.background=color;f.style.transition=`opacity ${dur||0.35}s`;f.style.opacity=on?1:0;},
-  touchMode(){if((G.state==='surface'&&!Game.final))this.digBtn(true);this.hint(null);},
+  touchMode(){if((G.state==='surface'&&!Game.final))this.digBtn(true);this.controls();this.hint(null);},
   lockState(locked){
     if(G.touch)return;
     if(!locked&&['surface','hut'].includes(G.state)&&!this.inspOpen)this.hint('화면을 클릭하면 마우스로 둘러볼 수 있습니다',0);
     else if(locked&&$('hint').textContent.startsWith('화면을 클릭')){if(G.state==='surface'&&!G.digs)this.hint('마당 흙을 내려다보고 마우스 왼쪽을 누르고 있으면 팝니다',7000);else this.hint(null);}
   },
   assemblyOpen:false,
+  assemblyName(it){const n=Assemblage.parts(it).length;return ITEMS[it.id].name+(n>1?` + ${n-1}개`:'');},
   openAssemblyPicker(){
     if(G.state!=='hut'||this.inspOpen||this.assemblyOpen)return;
-    const targets=Hut.items;
-    if(!targets.length)return;
+    const singles=Hut.items.filter(it=>Assemblage.parts(it).length===1);
+    const targets=Hut.items.filter(it=>singles.some(other=>other!==it));
     this.assemblyInputEnabled=Input.enabled;this.assemblyOpen=true;Input.release();Input.enabled=false;P.vel.set(0,0,0);
     if(document.pointerLockElement)document.exitPointerLock();
     const list=$('assemblyList');list.replaceChildren();
+    list.hidden=!targets.length;$('assemblyEmpty').hidden=!!targets.length;
+    $('assemblyTitle').textContent=targets.length?'1. 바탕이 될 물건을 고르세요':'붙일 물건을 준비해 주세요';
+    $('assemblyLead').textContent=targets.length?'고른 물건 위에 다른 조각을 붙일 거예요.':'집에 따로 놓인 물건이 있으면 바로 시작할 수 있어요.';
+    $('assemblyEmpty').textContent=Hut.items.length<2?'집에 물건을 두 개 이상 놓아 주세요.\n주머니에 있는 물건은 「놓기」로 꺼낼 수 있어요.':'붙일 낱개 조각이 없어요.\n붙인 물건을 눌러 「마지막 조각 떼기」를 하거나,\n집에 다른 물건을 하나 더 놓아 주세요.';
+    $('assemblyClose').textContent=targets.length?'닫기':'집으로 돌아가기';
     targets.forEach(it=>{const b=document.createElement('button'),img=document.createElement('img'),label=document.createElement('span');
-      b.type='button';img.src=ITEMS[it.id].icon;img.alt='';label.textContent=Assemblage.parts(it).length>1?'붙인 물건':ITEMS[it.id].name;b.append(img,label);
+      b.type='button';img.src=ITEMS[it.id].icon;img.alt='';label.textContent=this.assemblyName(it);b.append(img,label);
       b.addEventListener('click',()=>{this.closeAssemblyPicker();this.inspect(it);this.beginAttach();});list.append(b);});
     $('assemblyPicker').hidden=false;$('assembleOpen').hidden=true;
   },
@@ -2637,7 +2742,7 @@ const UI={
   inspOpen:false, inspR:null, inspScene:null, inspCam:null, inspObj:null, inspDrag:null, inspRot:{x:0.35,y:0.4},
   inspect(subject){
     this.inspItem=typeof subject==='string'?null:subject;this.inspId=this.inspItem?this.inspItem.id:subject;
-    this.inspInputEnabled=Input.enabled;this.attachMode=false;this.pendingAttach=null;this.postcardFlip=null;
+    this.inspInputEnabled=Input.enabled;this.attachMode=false;this.pendingAttach=null;this.postcardFlip=null;this.assemblyNotice='';
     $('flipPostcard').hidden=this.inspId!=='postcard';$('flipPostcard').disabled=false;
     $('insp').classList.add('show');this.inspOpen=true;Input.release();Input.enabled=false;P.vel.set(0,0,0);
     if(document.pointerLockElement)document.exitPointerLock();this.hint(null);
@@ -2650,28 +2755,35 @@ const UI={
         if(Math.hypot(e.clientX-d.sx,e.clientY-d.sy)>7)d.moved=true;
         if(d.moved){this.inspRot.y+=(e.clientX-d.x)*0.012;this.inspRot.x=clamp(this.inspRot.x+(e.clientY-d.y)*0.012,-1.3,1.3);}
         d.x=e.clientX;d.y=e.clientY;});
-      cv.addEventListener('pointerup',e=>{const d=this.inspDrag;if(!d||d.id!==e.pointerId)return;this.inspDrag=null;if(!d.moved&&this.pendingAttach)this.attachPoint(e.clientX,e.clientY);});
+      cv.addEventListener('pointerup',e=>{const d=this.inspDrag;if(!d||d.id!==e.pointerId)return;this.inspDrag=null;if(!d.moved&&this.attachMode){if(this.pendingAttach)this.attachPoint(e.clientX,e.clientY);else this.attachGuide('아래 목록에서 붙일 조각을 먼저 골라주세요.');}});
       cv.addEventListener('pointercancel',()=>{this.inspDrag=null;});cv.addEventListener('lostpointercapture',()=>{this.inspDrag=null;});
       $('inspClose').addEventListener('click',()=>{AU.uiTap();this.closeInspect();});
       $('flipPostcard').addEventListener('click',()=>this.flipPostcard());
       $('attachStart').addEventListener('click',()=>this.beginAttach());
-      $('detachLast').addEventListener('click',()=>{if(Hut.detach(this.inspItem)){AU.place();this.refreshInspect();}});
+      $('detachLast').addEventListener('click',()=>{if(Hut.detach(this.inspItem)){AU.place();this.assemblyNotice='마지막 조각을 뗐어요. 집에 다시 놓여 있어요.';this.refreshInspect();}});
+      $('attachBack').addEventListener('click',()=>{this.closeInspect();this.openAssemblyPicker();});
       $('attachCancel').addEventListener('click',()=>{this.cancelAttach();this.refreshInspect();});
       $('attachTurn').addEventListener('click',()=>this.turnAttach('y'));
       $('attachTilt').addEventListener('click',()=>this.turnAttach('x'));
-      $('attachConfirm').addEventListener('click',()=>{const p=this.pendingAttach;if(p&&p.pose&&Hut.attach(this.inspItem,p.source,p.pose)){AU.place();this.cancelAttach();this.refreshInspect();}});
+      $('attachConfirm').addEventListener('click',()=>{const p=this.pendingAttach;if(p&&p.pose&&Hut.attach(this.inspItem,p.source,p.pose)){AU.place();this.cancelAttach();this.assemblyNotice='붙였어요! 「마지막 조각 떼기」로 되돌릴 수 있어요.';this.refreshInspect();}});
     }
     this.inspRot=this.inspId==='postcard'?{x:0.1,y:0}:{x:0.35,y:0.4};this.refreshInspect();
   },
   attachCandidates(){return this.inspItem?Hut.items.filter(it=>it!==this.inspItem&&Assemblage.parts(it).length===1&&!ITEMS[it.id].tool&&!ITEMS[it.id].special):[];},
   refreshInspect(){
     const it=ITEMS[this.inspId],parts=this.inspItem?Assemblage.parts(this.inspItem):null,joined=parts&&parts.length>1,quiet=joined||this.attachMode;
-    $('insp').classList.toggle('working',!!this.inspItem);
+    $('insp').classList.toggle('working',!!this.inspItem);$('insp').classList.toggle('assembling',this.attachMode);
     $('inspName').textContent=quiet?'':it.name;$('inspName').hidden=!!quiet;
     const r=$('inspRare');r.style.display=quiet||it.tool||it.special?'none':'';r.textContent=RARE_LABEL[it.r||1];r.className=it.r===2?'r2':it.r===3?'r3':'';
     $('inspDesc').textContent=quiet?'':(it.litter?'누가 버린 것.':(it.d||''));$('inspDesc').hidden=!!quiet;
-    $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;$('attachHelp').hidden=!this.attachMode;
-    $('attachStart').disabled=this.attachCandidates().length===0;$('detachLast').disabled=!joined;
+    const candidates=this.attachCandidates();
+    $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;
+    for(const id of ['attachGuide','attachSelection','attachGesture','attachTrayLabel'])$(id).hidden=!this.attachMode;
+    $('attachPreview').hidden=true;$('assembleIntro').hidden=!this.inspItem||this.attachMode;
+    $('attachStart').disabled=candidates.length===0;$('attachStart').textContent=joined?'더 붙이기':'다른 물건 붙이기';$('detachLast').hidden=!joined;$('detachLast').disabled=!joined;
+    $('assembleIntro').textContent=this.assemblyNotice||(candidates.length?'「다른 물건 붙이기」에서 조각을 고르고,\n이 물건의 원하는 자리에 붙일 수 있어요.':joined?'붙일 낱개 물건이 없어요. 마지막 조각을 떼거나\n집에 다른 물건을 더 놓아 주세요.':'붙일 물건이 하나 더 필요해요.\n집에 물건을 하나 더 놓은 뒤 다시 눌러주세요.');
+    if(joined&&candidates.length&&!this.assemblyNotice)$('assembleIntro').textContent='「더 붙이기」로 조각을 더 붙일 수 있어요.\n「마지막 조각 떼기」로 하나씩 되돌릴 수 있어요.';
+    if(this.attachMode){$('attachBaseName').textContent='바탕: '+this.assemblyName(this.inspItem);$('attachGesture').textContent=G.touch?'드래그로 돌려보기 · 톡 눌러 위치 선택':'드래그로 돌려보기 · 클릭으로 위치 선택';this.attachGuide();}
     if(this.inspObj){this.inspScene.remove(this.inspObj);Assemblage.release(this.inspObj);}
     const g=parts?Assemblage.mesh(parts):makeItemMesh(this.inspId);swapEnv(g,this.inspEnv);
     this.inspAssembly=g;const w=fitObject(g,this.inspItem?0.56:0.78);this.inspScene.add(w);this.inspObj=w;w.rotation.set(this.inspRot.x,this.inspRot.y,0);
@@ -2679,20 +2791,30 @@ const UI={
   },
   frameInspect(){
     const center=new THREE.Vector3();let distance=1.9;
-    if(this.pendingAttach?.g.visible){const sphere=new THREE.Box3().setFromObject(this.inspObj).getBoundingSphere(new THREE.Sphere());center.copy(sphere.center);distance=Math.max(distance,sphere.radius/Math.sin(Math.PI/12)*1.1);}
+    if(this.attachMode||this.pendingAttach?.g.visible){const sphere=new THREE.Box3().setFromObject(this.inspObj).getBoundingSphere(new THREE.Sphere());center.copy(sphere.center);distance=Math.max(0.8,sphere.radius/Math.sin(Math.PI/12)*1.16);}
     this.inspCam.position.copy(center).add(new THREE.Vector3(0,0.25,distance));this.inspCam.lookAt(center);this.inspCam.updateMatrixWorld();
   },
   resizeInspect(){const cv=$('inspc'),sz=cv.clientWidth;if(sz!==this.inspSize){this.inspSize=sz;this.inspR.setSize(sz,sz,false);}},
   beginAttach(){
-    if(!this.attachCandidates().length)return;this.attachMode=true;this.refreshInspect();
-    const tray=$('attachTray');tray.replaceChildren();$('attachHelp').textContent='아래에서 붙일 조각을 고르세요';
-    this.attachCandidates().forEach(source=>{const b=document.createElement('button'),img=document.createElement('img');b.type='button';b.setAttribute('aria-label',ITEMS[source.id].name);img.src=ITEMS[source.id].icon;img.alt='';b.append(img);
+    if(!this.attachCandidates().length)return;this.assemblyNotice='';this.attachMode=true;this.refreshInspect();
+    const tray=$('attachTray');tray.replaceChildren();
+    this.attachCandidates().forEach(source=>{const b=document.createElement('button'),img=document.createElement('img'),label=document.createElement('span');b.type='button';b.setAttribute('aria-label',ITEMS[source.id].name);b.setAttribute('aria-pressed','false');img.src=ITEMS[source.id].icon;img.alt='';label.textContent=ITEMS[source.id].name;b.append(img,label);
       b.addEventListener('click',()=>{this.clearGhost();const g=fitObject(Assemblage.component(source.id),0.2);swapEnv(g,this.inspEnv);
         g.traverse(o=>{if(o.isMesh){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{m.transparent=true;m.opacity=0.6;m.depthWrite=false;});}});
         g.visible=false;this.inspAssembly.add(g);this.pendingAttach={source,g,q:new THREE.Quaternion(),pose:null,contact:null};
-        [...tray.children].forEach(c=>c.classList.toggle('selected',c===b));$('attachConfirm').disabled=true;$('attachConfirm').textContent='붙일 곳 선택';$('attachHelp').textContent='위 물건에서 붙일 곳을 누르세요';
+        [...tray.children].forEach(c=>{c.classList.toggle('selected',c===b);c.setAttribute('aria-pressed',c===b?'true':'false');});this.attachGuide();AU.uiTap();
       });tray.append(b);});
-    $('attachConfirm').disabled=true;$('attachConfirm').textContent='조각 선택';
+    this.attachGuide();
+  },
+  attachGuide(message){
+    const p=this.pendingAttach,ready=!!p?.pose;
+    $('attachStep2').classList.toggle('active',!p);$('attachStep3').classList.toggle('active',!!p);
+    $('attachTitle').textContent=!p?'2. 붙일 조각을 고르세요':ready?'3. 미리보기를 보고 붙여주세요':'3. 물건에서 붙일 자리를 누르세요';
+    $('attachHelp').textContent=message||(!p?'아래 목록에서 조각 하나를 고르세요.\n집에 놓은 낱개 물건들이에요.':ready?'반투명한 조각은 아직 미리보기예요.\n다른 자리를 눌러 바꾸거나 「여기에 붙이기」를 누르세요.':G.touch?'큰 물건의 표면을 손가락으로 톡 눌러주세요.\n드래그하면 뒷면도 돌려볼 수 있어요.':'큰 물건의 표면을 클릭해 주세요.\n드래그하면 뒷면도 돌려볼 수 있어요.');
+    $('attachHelp').classList.toggle('miss',!!message);
+    $('attachTrayLabel').textContent=p?'선택한 조각: '+ITEMS[p.source.id].name:'붙일 조각'+(this.attachCandidates().length>3?' · 옆으로 밀어서 더 보기':'');
+    $('attachPreview').hidden=!ready;$('attachConfirm').disabled=!ready;$('attachConfirm').textContent=ready?'여기에 붙이기':p?'위치를 먼저 고르세요':'조각을 먼저 고르세요';
+    $('attachTurn').disabled=$('attachTilt').disabled=!ready;
   },
   clearGhost(){if(this.pendingAttach){const g=this.pendingAttach.g;g.parent?.remove(g);Assemblage.release(g);}this.pendingAttach=null;},
   cancelAttach(){this.clearGhost();this.attachMode=false;this.inspDrag=null;},
@@ -2700,7 +2822,7 @@ const UI={
     const pending=this.pendingAttach;if(!pending)return;
     const cv=$('inspc'),r=cv.getBoundingClientRect(),rc=new THREE.Raycaster();
     this.inspScene.updateMatrixWorld(true);rc.setFromCamera(new THREE.Vector2((x-r.left)/r.width*2-1,1-(y-r.top)/r.height*2),this.inspCam);
-    const targets=this.inspAssembly.children.filter(c=>c!==pending.g),hit=rc.intersectObjects(targets,true)[0];if(!hit||!hit.face)return;
+    const targets=this.inspAssembly.children.filter(c=>c!==pending.g),hit=rc.intersectObjects(targets,true)[0];if(!hit||!hit.face){this.attachGuide('큰 물건의 표면을 눌러주세요.\n드래그로 돌리면 다른 면을 고를 수 있어요.');return;}
     const inv=new THREE.Matrix4().copy(this.inspAssembly.matrixWorld).invert();
     const point=hit.point.clone().applyMatrix4(inv),normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld).transformDirection(inv);
     pending.contact={point,normal};this.positionAttach();
@@ -2712,7 +2834,7 @@ const UI={
     let min=Infinity,max=-Infinity;const v=new THREE.Vector3(),walk=(o,m)=>{o.updateMatrix();const next=m.clone().multiply(o.matrix);if(o.isMesh){const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){v.fromBufferAttribute(a,i).applyMatrix4(next);const d=v.dot(p.contact.normal);min=Math.min(min,d);max=Math.max(max,d);}}o.children.forEach(c=>walk(c,next));};
     walk(g,new THREE.Matrix4());if(!Number.isFinite(min))return;
     g.position.copy(p.contact.point).addScaledVector(p.contact.normal,-min-Math.min(0.0025,(max-min)*0.08));g.visible=true;
-    p.pose={p:g.position.toArray(),q:g.quaternion.toArray()};this.frameInspect();$('attachConfirm').disabled=false;$('attachConfirm').textContent='붙이기';
+    p.pose={p:g.position.toArray(),q:g.quaternion.toArray()};this.frameInspect();this.attachGuide();
   },
   turnAttach(axis){const p=this.pendingAttach;if(!p)return;p.q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(axis==='x'?1:0,axis==='y'?1:0,0),Math.PI/4));this.positionAttach();},
   flipPostcard(){
@@ -3105,8 +3227,8 @@ const Game={
   // ----- loop -----
   tick(dt){
     G.t+=dt;const t=G.t;
-    Input.update(dt);
-    $('assembleOpen').hidden=G.state!=='hut'||UI.inspOpen||UI.assemblyOpen||Hut.items.length<2;
+    UI.controls();Input.update(dt);
+    $('assembleOpen').hidden=G.state!=='hut'||UI.inspOpen||UI.assemblyOpen;
     if(UI.inspOpen||UI.assemblyOpen){if(UI.inspOpen)UI.inspRender(dt);if(this.sceneKey==='hut')Hut.update(dt,t);else Surface.update(dt,t);return;}
     const st=G.state;
     if(this.tr)this.updateTransition(dt,t);
