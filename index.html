@@ -125,6 +125,9 @@
   #end.show .btn{opacity:1;transition-delay:1.6s;}
 
   #fade{position:fixed;inset:0;background:#2b1b0d;opacity:0;pointer-events:none;transition:opacity .35s;}
+  #endShield{position:fixed;inset:0;z-index:40;display:none;touch-action:none;background:transparent;-webkit-user-select:none;user-select:none;}
+  #endShield.on{display:block;}
+  body.ending #arcade{visibility:hidden;}
 
   #insp{position:fixed;inset:0;background:rgba(247,241,220,.94);display:none;flex-direction:column;
     align-items:center;justify-content:center;gap:10px;padding:20px;}
@@ -323,6 +326,7 @@
     <button id="againBtn" class="btn">처음부터</button>
   </div>
 </div>
+<div id="endShield" aria-hidden="true"></div>
 <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
@@ -510,7 +514,7 @@ const G={
   era:0, maxEra:0, surfacings:0, descents:0,
   maxDepth:0, tool:0, hasStone:false, gotStick:false, gotStone:false,
   pouch:[], placed:[], bedrockHit:false, age:0,
-  touch:false, crafted:false, sandHint:false, digs:0, cardRead:false, got:{},
+  touch:false, crafted:false, sandHint:false, digs:0, cardRead:false, got:{}, ended:false,
 };
 
 // ---------- audio (all synthesized) ----------
@@ -696,6 +700,25 @@ const AU={
   craft(){if(!this.ctx)return;const t=this.ctx.currentTime;for(let i=0;i<3;i++){this.tone(240,0.08,'sine',0.2,t+i*0.24,undefined,150);this.noise(0.05,'lowpass',1200,1,0.12,t+i*0.24);}this.noise(0.35,'bandpass',1800,3,0.09,t+0.8);this.tone(1500,0.3,'sine',0.05,t+0.85,undefined,1800);},
   splash(big){if(!this.ctx)return;const t=this.ctx.currentTime;this.noise(big?0.4:0.22,'lowpass',1300,1,big?0.28:0.16,t);this.tone(200,0.2,'sine',0.11,t,undefined,90);for(let i=0;i<5;i++)this.tone(700+Math.random()*900,0.06,'sine',0.03,t+0.05+Math.random()*0.25,undefined,400);},
   slide(dur){if(!this.ctx)return;const t=this.ctx.currentTime;const n=this.noise(dur||0.6,'bandpass',900,2,0.09,t);n.f.frequency.setValueAtTime(1200,t);n.f.frequency.exponentialRampToValueAtTime(400,t+(dur||0.6));},
+  // soil giving way around a remembered person turning its head
+  crumble(dur=2.6){if(!this.ctx)return;const c=this.ctx,t=c.currentTime;
+    const r=this.noise(dur+.3,'lowpass',150,.7,.001,t,undefined,true);r.g.gain.cancelScheduledValues(t);r.g.gain.setValueAtTime(0,t);r.g.gain.linearRampToValueAtTime(.24,t+dur*.45);r.g.gain.linearRampToValueAtTime(.0005,t+dur+.25);
+    const n=Math.round(dur*26);for(let i=0;i<n;i++){const tt=t+Math.pow(Math.random(),.8)*dur;this.noise(.014+Math.random()*.03,'bandpass',260+Math.random()*1500,3+Math.random()*4,.045+Math.random()*.1,tt);}
+    const cr=this.noise(dur*.85,'bandpass',380,7,.09,t+dur*.08);cr.f.frequency.setValueAtTime(430,t+dur*.08);cr.f.frequency.exponentialRampToValueAtTime(190,t+dur*.92);
+    for(let i=0;i<4;i++){const tt=t+dur*(.2+i*.18)+Math.random()*.1;this.noise(.09,'lowpass',900,1,.1,tt);this.tone(70+Math.random()*20,.12,'sine',.14,tt,undefined,45);}
+  },
+  // feet landing on the yard; vol already includes distance
+  hop(vol){if(!this.ctx||vol<.005)return;const t=this.ctx.currentTime;
+    this.tone(92,.17,'sine',.34*vol,t,undefined,46,.002);this.noise(.1,'lowpass',520,1,.2*vol,t,undefined,true);this.noise(.06,'bandpass',1500,.9,.07*vol,t+.004);this.noise(.05,'highpass',3200,.7,.02*vol,t+.01);},
+  windOn(){if(!this.ctx||this.wind)return;const c=this.ctx,t=c.currentTime;
+    const mk=(type,f,q,brown)=>{const s=c.createBufferSource();s.buffer=brown?this.brownBuf:this.noiseBuf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=0;s.connect(fl);fl.connect(g);g.connect(this.sfx);s.start(t,Math.random()*1.5);return {s,f:fl,g};};
+    const a=mk('bandpass',380,.8),b=mk('lowpass',170,.7,true);
+    const lfo=c.createOscillator();lfo.frequency.value=.21;const lg=c.createGain();lg.gain.value=150;lfo.connect(lg);lg.connect(a.f.frequency);lfo.start(t);
+    this.wind={a,b,lfo};},
+  windSet(level,freq){const W=this.wind;if(!W||!this.ctx)return;const t=this.ctx.currentTime;W.a.g.gain.setTargetAtTime(level,t,.5);W.b.g.gain.setTargetAtTime(level*.8,t,.5);W.a.f.frequency.setTargetAtTime(freq,t,.8);},
+  windOff(fade=.06){const W=this.wind;if(!W||!this.ctx)return;this.wind=null;const t=this.ctx.currentTime;
+    [W.a,W.b].forEach(n=>{n.g.gain.cancelScheduledValues(t);n.g.gain.setValueAtTime(n.g.gain.value,t);n.g.gain.linearRampToValueAtTime(0,t+fade);});
+    setTimeout(()=>{[W.a.s,W.b.s,W.lfo].forEach(n=>{try{n.stop();}catch(e){}});},fade*1000+250);},
   uiTap(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(700,0.06,'sine',0.06,t,undefined,900);},
   tick(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(1600+Math.random()*1400,0.035,'sine',0.05,t);this.noise(0.02,'highpass',3000,1,0.03,t);},
   whistle(dur){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(1900,dur,'sine',0.018,t,undefined,700,0.3);},
@@ -1922,7 +1945,7 @@ const Surface={
     const tmp=new THREE.Vector3(),dir=new THREE.Vector3();
     for(let i=this.walkers.length-1;i>=0;i--){const w=this.walkers[i];w.dist+=w.speed*dt;const end=this.posOnPath(w.path,w.dist,tmp,dir);
       w.obj.root.position.x=tmp.x;w.obj.root.position.z=tmp.z;
-      if(!w.final&&(G.state==='surface'||G.state==='emerge')){const rx=tmp.x-pp.x,rz=tmp.z-pp.z;const rd=Math.hypot(rx,rz);if(rd<0.75&&rd>1e-3){const push=(0.75-rd);w.obj.root.position.x+=rx/rd*push;w.obj.root.position.z+=rz/rd*push;}}
+      if(!w.final&&(G.state==='surface'||G.state==='emerge'||G.state==='ending')){const rx=tmp.x-pp.x,rz=tmp.z-pp.z;const rd=Math.hypot(rx,rz);if(rd<0.75&&rd>1e-3){const push=(0.75-rd);w.obj.root.position.x+=rx/rd*push;w.obj.root.position.z+=rz/rd*push;}}
       if(w.hop){const H=Game.fin?Game.fin.hole:{x:PCX,z:PCZ,r:0.5};const d=Math.hypot(w.obj.root.position.x-H.x,w.obj.root.position.z-H.z);if(d<H.r+0.3&&!w.hopping){w.hopping=true;w.hopT=0;w.hopD=(2*H.r+0.6)/w.speed;w.hopH=0.5+0.25*H.r;}
         if(w.hopping){w.hopT+=dt;const k=w.hopT/w.hopD;w.obj.root.position.y=k<1?Math.sin(k*Math.PI)*w.hopH:0;if(k>=0.5&&!w.splashed){w.splashed=true;AU.splash(true);Surface.splash();}}}
       w.obj.root.rotation.y=Math.atan2(dir.x,dir.z);
@@ -2167,10 +2190,18 @@ const CaveLayout={
     [[-2.95,-3.15,.65,.78],[-3.3,-3.72,2.55,.8],[-1.85,-4.35,4.05,.86],[.15,-4.42,4.4,.75]],
     [[4.35,-3.68,-3.65,.76],[5.45,-4.1,-4.45,.64]],
     [[-5.65,-3.5,-2.8,.38],[-5.65,-3.5,-3.65,.38]],
+    [[.15,-4.42,4.4,.38],[1.42,-4.48,4.62,.38]],
+    [[5.45,-4.1,-4.45,.38],[6.42,-4.2,-4.62,.38]],
   ],
-  // The pocket is only large enough for one reclining figure. Its shell cannot
-  // be widened, and the narrow approach lets the player look in from outside.
-  pocket:{x:PCX-5.65,y:-3.55,z:PCZ-4.22,rx:.98,ry:.52,rz:1.0},
+  // One remembered person in each pocket, at the three dead ends. A pocket is
+  // only as large as that body and its shell cannot be widened; the narrow
+  // approach lets the player look in from outside. "from" is where they look.
+  pockets:[
+    {x:PCX-5.65,y:-3.55,z:PCZ-4.22,rx:.98,ry:.52,rz:1.0,pose:'lie',seed:11,from:[PCX-5.65,-3.1,PCZ-2.75]},
+    {x:PCX+1.98,y:-4.5,z:PCZ+4.7,rx:.8,ry:.62,rz:.8,pose:'sit',seed:23,from:[PCX+.15,-4.3,PCZ+4.4]},
+    {x:PCX+7.0,y:-4.25,z:PCZ-4.7,rx:.72,ry:.8,rz:.72,pose:'stand',seed:37,from:[PCX+5.45,-3.9,PCZ-4.45]},
+  ],
+  get pocket(){return this.pockets[0];},
   segments:null,
   prepare(){if(this.segments)return;this.segments=[];
     for(const route of this.routes)for(let i=1;i<route.length;i++){
@@ -2179,7 +2210,7 @@ const CaveLayout={
         x0:PCX+Math.min(a[0],b[0])-1.1,x1:PCX+Math.max(a[0],b[0])+1.1,z0:PCZ+Math.min(a[2],b[2])-1.1,z1:PCZ+Math.max(a[2],b[2])+1.1});
     }
   },
-  pocketDistance(x,y,z){const c=this.pocket;return (Math.hypot((x-c.x)/c.rx,(y-c.y)/c.ry,(z-c.z)/c.rz)-1)*Math.min(c.rx,c.ry,c.rz);},
+  pocketDistance(x,y,z){let d=9;for(const c of this.pockets){const v=(Math.hypot((x-c.x)/c.rx,(y-c.y)/c.ry,(z-c.z)/c.rz)-1)*Math.min(c.rx,c.ry,c.rz);if(v<d)d=v;}return d;},
   distance(x,y,z){
     if(y>this.ceiling+.4)return 1;
     this.prepare();let d=2;
@@ -2224,13 +2255,17 @@ const Terrain={
   resetField(){
     this.deepY=0;AIRCNT.fill(0);CaveLayout.prepare();
     for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++)TF.fill(clamp((TOPY-(TG.y0+j*VS))/VS,-DMAX,DMAX),TI(0,j,k),TI(0,j,k)+TNX);
-    const c=CaveLayout.pocket;
-    for(let k=Math.floor((c.z-c.rz-.18-TG.z0)/VS);k<=Math.ceil((c.z+c.rz+.18-TG.z0)/VS);k++)
-      for(let j=Math.floor((c.y-c.ry-.18-TG.y0)/VS);j<=Math.ceil((c.y+c.ry+.18-TG.y0)/VS);j++)
-        for(let i=Math.floor((c.x-c.rx-.18-TG.x0)/VS);i<=Math.ceil((c.x+c.rx+.18-TG.x0)/VS);i++){
-          const id=TI(i,j,k),d=CaveLayout.pocketDistance(TG.x0+i*VS,TG.y0+j*VS,TG.z0+k*VS)/VS;
-          TF[id]=Math.min(TF[id],clamp(d,-DMAX,DMAX));
-        }
+    this.carvePockets();
+  },
+  // The pockets exist before anyone digs to them; older saves get the ones they lack when loaded.
+  carvePockets(){
+    for(const c of CaveLayout.pockets)
+      for(let k=Math.floor((c.z-c.rz-.18-TG.z0)/VS);k<=Math.ceil((c.z+c.rz+.18-TG.z0)/VS);k++)
+        for(let j=Math.floor((c.y-c.ry-.18-TG.y0)/VS);j<=Math.ceil((c.y+c.ry+.18-TG.y0)/VS);j++)
+          for(let i=Math.floor((c.x-c.rx-.18-TG.x0)/VS);i<=Math.ceil((c.x+c.rx+.18-TG.x0)/VS);i++){
+            const id=TI(i,j,k),d=CaveLayout.pocketDistance(TG.x0+i*VS,TG.y0+j*VS,TG.z0+k*VS)/VS;
+            TF[id]=Math.min(TF[id],clamp(d,-DMAX,DMAX));
+          }
   },
   restoreLegacy(field){
     this.resetField();
@@ -2410,34 +2445,124 @@ const STRATA_C=STRATA.map(s=>[new THREE.Color(s.col),new THREE.Color(s.col2)]);
 const GRASS_C=[new THREE.Color(0x58a83a),new THREE.Color(0x7fc653)];
 const _tc=new THREE.Color();
 
-// A remembered pose in a sealed, body-sized pocket. There is no dialogue,
-// task, following behavior, or idle life simulation attached to this figure.
-const MemoryFigure={
-  person:null,seen:false,turn:0,probe:{p:new THREE.Vector3(),n:new THREE.Vector3()},
+// ---------- the remembered people ----------
+// One lies, one sits hugging its knees, one stands facing the wall, each sealed
+// in a body-sized pocket at a dead end of the caves. They are drawn without ink,
+// their faces are smudges and their edges crumble into the rock. Looking at one
+// makes it turn its head toward the hole. No dialogue, task or idle life.
+function memRand(seed){let s=seed>>>0;return ()=>{s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};}
+function memoryMaterial(map,color){
+  const m=TM(map?{color:0xffffff,map}:{color});
+  m.onBeforeCompile=sh=>{
+    sh.uniforms.uSoil={value:new THREE.Color(0x4f4c57)};sh.uniforms.uCut={value:.74};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vMemW;').replace('#include <project_vertex>','#include <project_vertex>\nvMemW=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+varying vec3 vMemW;uniform vec3 uSoil;uniform float uCut;
+float mh3(vec3 p){p=fract(p*0.3183099+.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float mn3(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+return mix(mix(mix(mh3(i),mh3(i+vec3(1,0,0)),f.x),mix(mh3(i+vec3(0,1,0)),mh3(i+vec3(1,1,0)),f.x),f.y),mix(mix(mh3(i+vec3(0,0,1)),mh3(i+vec3(1,0,1)),f.x),mix(mh3(i+vec3(0,1,1)),mh3(i+vec3(1,1,1)),f.x),f.y),f.z);}`)
+    .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+{float fres=1.0-abs(dot(normalize(normal),normalize(vViewPosition)));
+float nn=mn3(vMemW*13.0)*.55+mn3(vMemW*37.0)*.3+mn3(vMemW*91.0)*.15;
+float e=fres+(nn-.5)*.62;
+float g=mn3(vMemW*150.0)*.65+mn3(vMemW*61.0)*.35;
+float fk=smoothstep(uCut-.45,uCut,e);
+if(e>uCut||fk>g*1.05+.04)discard;
+float mot=mn3(vMemW*8.0)*.6+mn3(vMemW*21.0)*.4;
+float blot=smoothstep(.5,.85,mn3(vMemW*5.0+7.0));
+diffuseColor.rgb*=mix(.66,1.08,mot);
+diffuseColor.rgb=mix(diffuseColor.rgb,uSoil,clamp(fk*.85+blot*.35,0.,1.));}`);
+  };
+  m.customProgramCacheKey=()=>'memory-figure';return m;
+}
+// A face that is only smudges: soft blobs for eye sockets, one of them running, and a mouth.
+function memoryFace(seed){
+  const R=memRand(seed),cv=document.createElement('canvas');cv.width=512;cv.height=256;const c=cv.getContext('2d');
+  c.fillStyle='#a39786';c.fillRect(0,0,512,256);
+  const blob=(x,y,rx,ry,rot,col,a)=>{c.save();c.translate(x,y);c.rotate(rot);c.scale(rx,ry);const g=c.createRadialGradient(0,0,0,0,0,1);
+    g.addColorStop(0,`rgba(${col},${a})`);g.addColorStop(.45,`rgba(${col},${a*.82})`);g.addColorStop(1,`rgba(${col},0)`);c.fillStyle=g;c.fillRect(-1,-1,2,2);c.restore();};
+  for(let i=0;i<60;i++)blob(R()*512,R()*256,14+R()*44,8+R()*22,R()*3,`${60+R()*40|0},${55+R()*30|0},${60+R()*30|0}`,.06+R()*.08);
+  const ex=R()*10-5,ey=R()*8-4,low=6+R()*8,run=R()<.5;
+  blob(128+ex*.5,124,74,34,0,'30,24,24',.42);
+  blob(97+ex,113+ey,19,25,.15,'22,17,17',.95);
+  blob(161+ex,118+ey+low,21,18,-.35,'22,17,17',.9);
+  for(let k=0;k<8;k++)blob((run?162:98)+ex+k*1.2*(run?1:-1),(run?128+low:121)+ey+k*7,13-k*.9,12,0,'22,17,17',.4-k*.045);
+  blob(134+ex*.6,158+ey*.5,27,12,.18,'30,18,18',.72);
+  blob(120+ex*.6,166+ey*.5,34,9,.1,'30,18,18',.36);
+  // soften the whole thing once more by going through a small canvas
+  const sm=document.createElement('canvas');sm.width=128;sm.height=64;const sc=sm.getContext('2d');sc.imageSmoothingEnabled=true;sc.drawImage(cv,0,0,128,64);
+  c.globalAlpha=.5;c.imageSmoothingEnabled=true;c.drawImage(sm,0,0,512,256);c.globalAlpha=1;
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+function memoryLumpy(g,amp,f,seed,smooth){
+  if(!smooth)g=g.index?g.toNonIndexed():g;g.computeVertexNormals();const p=g.attributes.position,cache=new Map();
+  const h=(x,y,z)=>{const s=Math.sin(x*127.1+y*311.7+z*74.7+seed*17.3)*43758.5453;return s-Math.floor(s);};
+  const vn=(x,y,z)=>{const xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),xf=x-xi,yf=y-yi,zf=z-zi,s=t=>t*t*(3-2*t),u=s(xf),v=s(yf),w=s(zf),L=(a,b,t)=>a+(b-a)*t,c=(i,j,k)=>h(xi+i,yi+j,zi+k);
+    return L(L(L(c(0,0,0),c(1,0,0),u),L(c(0,1,0),c(1,1,0),u),v),L(L(c(0,0,1),c(1,0,1),u),L(c(0,1,1),c(1,1,1),u),v),w);};
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),key=x.toFixed(4)+','+y.toFixed(4)+','+z.toFixed(4);
+    let d=cache.get(key);if(d===undefined){d=(vn(x*f,y*f,z*f)-.5)*2*amp+(vn(x*f*2.7+3,y*f*2.7,z*f*2.7)-.5)*amp*.6;cache.set(key,d);}
+    const len=Math.hypot(x,y,z)||1;p.setXYZ(i,x+x/len*d,y+y/len*d,z+z/len*d);}
+  g.computeVertexNormals();return g;
+}
+function makeMemoryFigure(c){
+  const s=c.seed,bodyM=memoryMaterial(null,0x7a7268),headM=memoryMaterial(memoryFace(s));
+  const mesh=(g,m)=>{const x=new THREE.Mesh(g,m);x.userData.noInk=true;x.castShadow=false;x.receiveShadow=false;return x;};
+  let limbN=0;
+  const limb=(len,r0,r1)=>{const L=memRand(s*97+(++limbN)*13),b1=L()*6,b2=L(),b3=L()*6,bend=(L()-.5)*.24*len,pts=[];
+    for(let i=0;i<=18;i++){const t=i/18;let r=(r0+(r1-r0)*t)*(1+.18*Math.sin(Math.PI*t));r*=1+.24*b2*Math.sin(t*9+b1)+.1*Math.sin(t*17+b3);
+      r*=Math.sqrt(Math.max(0,1-Math.pow(2*t-1,8)));pts.push(new THREE.Vector2(Math.max(r,.0005),-t*len));}
+    const g=new THREE.LatheGeometry(pts,14),p=g.attributes.position;for(let i=0;i<p.count;i++){const t=-p.getY(i)/len;p.setX(i,p.getX(i)+Math.sin(Math.PI*t)*bend);}
+    return memoryLumpy(g,.01,9,s,true);};
+  const root=new THREE.Group(),body=new THREE.Group();root.add(body);
+  const sack=[];for(let i=0;i<=16;i++){const t=i/16;const r=(.17+.07*Math.sin(Math.PI*Math.min(1,t*1.15)))*Math.sqrt(Math.max(0,1-Math.pow(2*t-1,10)));sack.push(new THREE.Vector2(Math.max(r,.0005),.24-t*.5));}
+  const torso=mesh(memoryLumpy(new THREE.LatheGeometry(sack,16),.045,5.5,s),bodyM);torso.scale.set(1.08,1,.8);torso.position.y=.5;body.add(torso);
+  const headG=new THREE.Group();headG.rotation.order='YXZ';headG.position.y=.72;body.add(headG);
+  const head=mesh(memoryLumpy(new THREE.SphereGeometry(.36,40,28),.028,3.2,s),headM);head.position.y=.3;head.scale.set(.96,1.05,.97);headG.add(head);
+  if(c.pose==='sit'){const hair=mesh(memoryLumpy(new THREE.CapsuleGeometry(.3,.3,6,14),.04,4,s),bodyM);hair.position.set(0,.2,-.1);hair.scale.set(1.1,1,.7);headG.add(hair);}
+  const seg=(parent,x,y,len,r0,r1)=>{const g=new THREE.Group();g.position.set(x,y,0);g.add(mesh(limb(len,r0,r1),bodyM));parent.add(g);return g;};
+  const armLen=c.pose==='stand'?.9:.62;
+  const arm=(x,k)=>{const up=seg(body,x,.66,armLen*.5,.064,.05),lo=new THREE.Group();lo.position.y=-armLen*.44;lo.add(mesh(limb(armLen*.56*k,.052,.012),bodyM));up.add(lo);up.lo=lo;return up;};
+  const armL=arm(-.25,1),armR=arm(.25,1.12);
+  const thighL=seg(body,-.1,.32,.2,.08,.065),thighR=seg(body,.1,.32,.2,.08,.065);
+  const shin=t=>{const g=new THREE.Group();g.position.y=-.17;g.add(mesh(limb(.24,.066,.03),bodyM));t.add(g);return g;};
+  const shinL=shin(thighL),shinR=shin(thighR);
+  if(c.pose==='lie'){root.rotation.z=Math.PI/2;thighL.rotation.x=-.5;shinL.rotation.x=.9;thighR.rotation.x=-.25;shinR.rotation.x=.5;
+    armL.rotation.set(-.8,0,-.25);armR.rotation.set(-.35,0,.2);armL.lo.rotation.x=-.9;armR.lo.rotation.set(-.4,0,.5);headG.rotation.set(-.15,-.9,0);}
+  if(c.pose==='sit'){body.position.y=-.3;thighL.rotation.set(-1.25,0,.08);thighR.rotation.set(-1.25,0,-.08);shinL.rotation.x=shinR.rotation.x=1.95;
+    armL.rotation.set(-1.0,0,.5);armR.rotation.set(-1.0,0,-.5);armL.lo.rotation.set(-.5,0,.9);armR.lo.rotation.set(-.5,0,-.9);torso.rotation.x=.18;headG.position.z=.06;headG.rotation.set(.62,0,0);}
+  if(c.pose==='stand'){armL.rotation.set(.05,0,-.06);armR.rotation.set(0,0,.05);armL.lo.rotation.x=.12;armR.lo.rotation.z=.1;body.rotation.x=.06;headG.rotation.set(.32,0,0);}
+  root.scale.setScalar(.94);
+  return {root,body,headG,head};
+}
+const Memory={
+  figs:[],_face:new THREE.Vector3(),_dir:new THREE.Vector3(),_probe:{p:new THREE.Vector3(),n:new THREE.Vector3()},
   init(){
-    const c=CaveLayout.pocket;
-    this.person=makePerson({skin:0xd7baa4,hair:0x302c2d,hairStyle:'cap',top:0x727a76,bottom:0x494749,scale:.94});
-    const p=this.person;p.root.name='remembered-figure';
-    p.root.position.set(c.x+.63,c.y-.08,c.z-.08);p.root.rotation.z=Math.PI/2;
-    p.legL.rotation.x=.3;p.legR.rotation.x=.54;p.armL.rotation.x=-.45;p.armR.rotation.x=-.2;
-    p.armL.rotation.z=-.3;p.armR.rotation.z=.23;p.headG.rotation.x=-.12;
-    // The eyes share the existing character style but have no shining catchlight.
-    p.headG.children.forEach(o=>{if(o.isMesh&&o.material.isMeshBasicMaterial)o.visible=false;});
-    [p.legL,p.legR,p.armL,p.armR].forEach(bakeVC);
-    p.root.visible=false;SURF.scene.add(p.root);
-    this.face=new THREE.Vector3();this.direction=new THREE.Vector3();
-  },
-  restore(seen){this.seen=seen;this.turn=seen?1:0;if(this.person)this.person.headG.rotation.x=seen?.04:-.12;},
-  update(dt,eye){
-    const p=this.person;if(!p)return;
-    const c=CaveLayout.pocket,near=eye.y<-2&&eye.distanceToSquared(p.root.position)<25;
-    p.root.visible=near;if(!near)return;
-    if(!this.seen){
-      p.root.updateMatrixWorld(true);p.head.getWorldPosition(this.face);
-      this.direction.copy(this.face).sub(eye);const distance=this.direction.length();this.direction.normalize();
-      if(distance<3.2&&viewDir(_vg).dot(this.direction)>.65&&!Terrain.ray(eye,this.direction,Math.max(0,distance-.3),this.probe))this.seen=true;
+    for(const c of CaveLayout.pockets){
+      const f=makeMemoryFigure(c),r=f.root;r.name='remembered-'+c.pose;
+      if(c.pose==='lie'){r.position.set(c.x+.63,c.y-.13,c.z-.08);}
+      else{const yaw=Math.atan2(c.from[0]-c.x,c.from[2]-c.z);r.position.set(c.x,c.y-c.ry+.04,c.z);r.rotation.y=c.pose==='stand'?yaw+Math.PI:yaw;}
+      r.updateMatrixWorld(true);
+      // where the head ends up once it has turned toward the hole
+      const hp=new THREE.Vector3();f.head.getWorldPosition(hp);const q=new THREE.Quaternion();f.headG.parent.getWorldQuaternion(q);
+      const dl=new THREE.Vector3(...c.from).sub(hp).applyQuaternion(q.invert());
+      const maxYaw=c.pose==='stand'?2.3:1.35;
+      f.h0={x:f.headG.rotation.x,y:f.headG.rotation.y};
+      f.h1={x:clamp(-Math.atan2(dl.y,Math.hypot(dl.x,dl.z)),-.75,.75),y:clamp(Math.atan2(dl.x,dl.z),-maxYaw,maxYaw)};
+      f.seen=false;f.turn=0;r.visible=false;SURF.scene.add(r);this.figs.push(f);
     }
-    if(this.seen&&this.turn<1){this.turn=Math.min(1,this.turn+dt*.7);p.headG.rotation.x=lerp(-.12,.04,easeInOut(this.turn));}
+  },
+  allSeen(){return this.figs.length>0&&this.figs.every(f=>f.seen);},
+  restore(list){this.figs.forEach((f,i)=>{f.seen=!!(list&&list[i]);f.turn=f.seen?1:0;const h=f.seen?f.h1:f.h0;f.headG.rotation.set(h.x,h.y,0);});},
+  update(dt,eye){
+    for(const f of this.figs){
+      const near=eye.y<-2&&eye.distanceToSquared(f.root.position)<25;f.root.visible=near;if(!near)continue;
+      if(!f.seen){
+        f.root.updateMatrixWorld(true);f.head.getWorldPosition(this._face);
+        this._dir.copy(this._face).sub(eye);const distance=this._dir.length();this._dir.normalize();
+        if(distance<3.2&&viewDir(_vg).dot(this._dir)>.65&&!Terrain.ray(eye,this._dir,Math.max(0,distance-.3),this._probe)){f.seen=true;f.turn=0;AU.crumble(2.6);}
+      }
+      if(f.seen&&f.turn<1){f.turn=Math.min(1,f.turn+dt/2.6);const e=easeInOut(f.turn);f.headG.rotation.set(lerp(f.h0.x,f.h1.x,e),lerp(f.h0.y,f.h1.y,e),0);}
+    }
   },
 };
 
@@ -2463,7 +2588,7 @@ const Inner={
   items:[], loose:[], debris:[], puffs:[], trail:[], falling:[], target:{hit:false,p:new THREE.Vector3(),n:new THREE.Vector3(),t:0}, tinks:0, vineDirty:true, vineT:0,
   init(){
     const S=SURF.scene;
-    Terrain.init();S.add(Terrain.group);MemoryFigure.init();
+    Terrain.init();S.add(Terrain.group);Memory.init();
     // items
     this.glintMat=new THREE.SpriteMaterial({map:glintTex,transparent:true,depthTest:false,depthWrite:false,opacity:0.9});
     const F=setupFinds();this.pool=[F.b0,F.b1,F.b2];this.poolCd=true;this.poolCap=true;this.nextFind=14;
@@ -2497,6 +2622,7 @@ const Inner={
     T.si=stratumIndexAt(x-T.n.x*0.015,y-T.n.y*0.015,z-T.n.z*0.015);
     if(y<CaveLayout.ceiling&&CaveLayout.distance(x,y,z)<.08)T.si=4;
     T.block=CaveLayout.limit(x,y,z)>-.012?'hard':STRATA[T.si].tool>G.tool?'tool':null;
+    if(Game.endingReady())T.block='hard';
     const r=G.tool===3&&y<CaveLayout.ceiling?.32:TOOL_R[G.tool]*STR_K[Math.min(T.si,4)];
     this.ring.visible=false;
     HU.uHit.value.copy(T.p);HU.uHitR.value=clamp(Math.min(r*0.7,T.p.distanceTo(o)*0.12),0.03,0.2);HU.uHitCol.value.set(T.block?0xff8a3a:0xffffff);HU.uHitOn.value=1;
@@ -2574,7 +2700,7 @@ const Inner={
   },
   update(dt,t,P,camPos){
     const S=SURF.scene;const dk=this.depthK(P.pos.y);
-    MemoryFigure.update(dt,camPos);
+    Memory.update(dt,camPos);
     this.light.position.copy(camPos).add(V3(0,0.1,0));this.light.intensity=P.pos.y<-0.2?lerp(0.0,0.5,dk):0;
     // items
     for(let i=this.items.length-1;i>=0;i--){const it=this.items[i];
@@ -2856,6 +2982,7 @@ const UI={
   showPouch(on){$('pouch').classList.toggle('show',!!on);},
   pouchShake(){const el=$('pouch');el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');},
   toast(id,isTool,litter){
+    if(G.state==='ending')return;
     const it=ITEMS[id];const el=$('toast');
     el.querySelector('img').src=it.icon||'';el.querySelector('.nm').textContent=it.name;
     const tr=el.querySelector('.tr');
@@ -2864,7 +2991,7 @@ const UI={
     el.classList.add('show');if(this.toastT)clearTimeout(this.toastT);
     this.toastT=setTimeout(()=>el.classList.remove('show'),isTool?3200:3400);
   },
-  hint(text,ms){const h=$('hint');if(this.hintT)clearTimeout(this.hintT);if(!text){h.classList.remove('show');return;}h.textContent=text;h.classList.add('show');if(ms)this.hintT=setTimeout(()=>h.classList.remove('show'),ms);},
+  hint(text,ms){if(text&&G.state==='ending')return;const h=$('hint');if(this.hintT)clearTimeout(this.hintT);if(!text){h.classList.remove('show');return;}h.textContent=text;h.classList.add('show');if(ms)this.hintT=setTimeout(()=>h.classList.remove('show'),ms);},
   act(text,key,corner){const b=$('act');
     if(text){const k=(!G.touch&&key)?`<span class="k">${key}</span>`:'';const html=text+k;if(b._h!==html){b.innerHTML=html;b._h=html;}b.classList.add('show');b.classList.toggle('corner',!!corner);}
     else{b.classList.remove('show');b._h='';}},
@@ -3056,12 +3183,14 @@ const Game={
     UI.pouch();
     Save.init();
     $('startBtn').addEventListener('click',()=>this.launch());
-    $('newGameBtn').addEventListener('click',()=>{if(Save.reset()){if(this.restoreFailed)location.reload();else this.start();}});
+    $('newGameBtn').addEventListener('click',()=>{if(Save.reset()){if(this.restoreFailed||G.state==='endTitle')location.reload();else this.start();}});
     $('againBtn').addEventListener('click',()=>{if(Save.reset())location.reload();});
     $('act').addEventListener('click',()=>{AU.uiTap();this.action();});
+    ['pointerdown','pointerup','click','dblclick','contextmenu','touchstart','touchmove','touchend','wheel'].forEach(ev=>$('endShield').addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();},{passive:false}));
     Input.tapCb=(x,y)=>this.onTap(x,y);
     Input.clickCb=(x,y,locked)=>this.onClick(x,y,locked);
     Input.keyCb=code=>{
+      if(G.state==='ending'||G.state==='endTitle')return;
       if(code==='KeyE'||code==='Enter'){if($('act').classList.contains('show'))this.action();}
       if(code==='Escape'&&UI.inspOpen)UI.closeInspect();
       if(code==='Space'&&G.state==='surface'&&P.grounded){P.vel.y=3.4;P.grounded=false;}
@@ -3070,6 +3199,7 @@ const Game={
     this.loop();
   },
   async launch(){
+    if(G.state==='endTitle'){this.resumeAfterEnding();return;}
     if(this.launching)return;
     if(!Save.saved){if(Save.corrupt&&!Save.reset())return;this.start();return;}
     this.launching=true;const button=$('startBtn');button.disabled=true;button.textContent='불러오는 중…';$('newGameBtn').disabled=true;
@@ -3106,7 +3236,7 @@ const Game={
     else if(this.canPlaceItem())this.placeItem();
   },
   nearPit(){return Math.hypot(P.pos.x-Surface.pitPos.x,P.pos.z-Surface.pitPos.z)<1.75;},
-  canClimb(){return G.state==='surface'&&P.pos.y<-0.12&&Math.hypot(P.pos.x-PCX,P.pos.z-PCZ)<R_DIG-.12;},
+  canClimb(){return G.state==='surface'&&P.pos.y<-0.12&&(Math.hypot(P.pos.x-PCX,P.pos.z-PCZ)<R_DIG-.12||this.endingReady());},
   onTap(x,y){if(UI.inspOpen)return;this.pickAt(new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   onClick(x,y,locked){if(UI.inspOpen)return;this.pickAt(locked?new THREE.Vector2(0,0):new THREE.Vector2((x/window.innerWidth)*2-1,-(y/window.innerHeight)*2+1));},
   pickAt(ndc){
@@ -3159,6 +3289,7 @@ const Game={
     if(ex*ex+ez*ez<1)return 'dirt';if(Math.abs(P.pos.z-4.4)<1.4)return e>=2?'pave':'dirt';return e>=4?'pave':'grass';},
   // ----- the yard: walking and digging in one continuous place -----
   updateSurface(dt,t){
+    if(this.endingReady()&&this.sceneKey==='surface'&&P.pos.y>-.06&&P.grounded){this.startEnding();return;}
     this.look();
     const inPit=P.pos.y<-0.12;
     const w=this.wishDir((inPit?2.4:3.1)*P.speedK);const prev=P.pos.clone();
@@ -3268,19 +3399,138 @@ const Game={
   },
   // out of the hole: a short scramble back to where you last stood on the yard
   startClimb(){
+    const inShaft=Math.hypot(P.pos.x-PCX,P.pos.z-PCZ)<R_DIG-.12;
     G.state='climb';Input.enabled=false;Input.release();UI.act(null);
-    const from=P.pos.clone();let to=this.lastTop.clone();
-    if(Terrain.sample(to.x,-0.05,to.z)<=0){let best=null;for(let r=0.3;r<4.2&&!best;r+=0.15)for(let i=0;i<20;i++){const a=i/20*6.283;const x=from.x+Math.cos(a)*r,z=from.z+Math.sin(a)*r;if(Terrain.sample(x,-0.05,z)>0.5&&!Surface.blocked(x,z,0.35)){best=new THREE.Vector3(x,TOPY,z);break;}}if(best)to=best;}
+    const from=P.pos.clone(),base=inShaft?from:V3(PCX,0,PCZ);let to=this.lastTop.clone();
+    if(Terrain.sample(to.x,-0.05,to.z)<=0){let best=null;for(let r=0.3;r<4.2&&!best;r+=0.15)for(let i=0;i<20;i++){const a=i/20*6.283;const x=base.x+Math.cos(a)*r,z=base.z+Math.sin(a)*r;if(Terrain.sample(x,-0.05,z)>0.5&&!Surface.blocked(x,z,0.35)){best=new THREE.Vector3(x,TOPY,z);break;}}if(best)to=best;}
+    // from the far end of a cave there is no straight way up through the rock
+    if(!inShaft){this.tr={kind:'fade',t:0,dur:.8,from,to,moved:false};UI.fade(true,.3,'#2b1b0d');AU.slide(.5);return;}
     const d=from.distanceTo(to);
     this.tr={kind:'climb',t:0,dur:clamp(0.5+d*0.35,0.6,1.3),from,to,creak:0};AU.slide(0.4);
   },
   updateTransition(dt,t){
     const tr=this.tr;tr.t+=dt;const k=Math.min(1,tr.t/tr.dur);
+    if(tr.kind==='fade'){
+      if(!tr.moved&&tr.t>=.33){tr.moved=true;P.pos.copy(tr.to);P.vel.set(0,0,0);P.camY=P.pos.y+P.eye;P.pitch=Math.max(P.pitch,-.35);UI.fade(false,.4);}
+      camera.position.set(P.pos.x,P.camY,P.pos.z);camera.rotation.set(P.pitch,P.yaw,0);
+      Surface.playerPos.copy(P.pos);Surface.update(dt,t);Inner.update(dt,t,P,camera.position);
+      if(k>=1){this.tr=null;P.grounded=true;G.state='surface';View.mode='idle';Input.enabled=true;AU.land();}
+      return;
+    }
     if(tr.kind==='climb'){
       const e=easeInOut(k);P.pos.lerpVectors(tr.from,tr.to,e);P.pos.y+=Math.sin(k*Math.PI)*0.25;P.camY=P.pos.y+P.eye;P.vel.set(0,0,0);this.setCam();
       Surface.playerPos.copy(P.pos);Surface.update(dt,t);Inner.update(dt,t,P,camera.position);
       if(k>=1){this.tr=null;P.pos.copy(tr.to);P.grounded=true;G.state='surface';View.mode='idle';Input.enabled=true;AU.land();}
     }
+  },
+  // ----- hidden ending: after the last remembered person, up into the sky -----
+  endingReady(){return !G.ended&&Memory.allSeen();},
+  startEnding(){
+    G.state='ending';Input.enabled=false;Input.release();
+    UI.act(null);UI.showPouch(false);UI.cross(false);UI.digBtn(false);UI.hint(null);UI.minimap(false);$('toast').classList.remove('show');
+    if(UI.inspOpen)UI.closeInspect();
+    document.body.classList.add('ending');$('endShield').classList.add('on');
+    if(document.pointerLockElement){try{document.exitPointerLock();}catch(e){}}
+    View.visible=false;View.swingT=-1;Terrain.hitU.uHitOn.value=0;P.vel.set(0,0,0);
+    const E=this.end={t:0,C:P.pos.clone(),yaw0:P.yaw,pitch0:P.pitch,camY0:P.camY,skyYaw:this.endSkyYaw(V3(P.pos.x,P.pos.y+P.eye,P.pos.z),P.yaw),cut:false,done:false,best:null,cands:[],ci:0,si:0,
+      occ:this.endOccluders(),ray:new THREE.Raycaster(),hopPh:0,wasAir:false,windT:0,tool:null,look:V3()};
+    for(let k=0;k<16;k++)E.cands.push({yaw:E.yaw0+k*Math.PI/8,hits:0});
+  },
+  // the direction (within reach of a turn of the head) where that era's sky has the most in it
+  endSkyYaw(eye,yaw0){
+    const bins=new Float32Array(72),v=new THREE.Vector3();
+    SURF.scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!o.userData.noInk||!o.geometry?.attributes?.position)return;let p=o;while(p){if(!p.visible)return;p=p.parent;}
+      const a=o.geometry.attributes.position,stp=Math.max(1,Math.floor(a.count/600));o.updateMatrixWorld();
+      for(let i=0;i<a.count;i+=stp){v.fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld).sub(eye);const el=Math.atan2(v.y,Math.hypot(v.x,v.z));if(el<.42||el>1.3)continue;
+        const b=((Math.round(Math.atan2(-v.x,-v.z)/(Math.PI/36))%72)+72)%72;bins[b]+=1;}});
+    let best=yaw0,bv=0;for(let k=-16;k<=16;k++){const y=yaw0+k*Math.PI/36,b=((Math.round(y/(Math.PI/36))%72)+72)%72;let sum=0;for(let j=-3;j<=3;j++)sum+=bins[(b+j+72)%72];sum*=1-Math.abs(k)/40;if(sum>bv){bv=sum;best=y;}}
+    return best;
+  },
+  endOccluders(){
+    const out=[],skip=new Set([Surface.sky,Terrain.group,this.playerModel.root,...Memory.figs.map(f=>f.root)]);
+    const walk=o=>{if(skip.has(o)||!o.visible)return;if(o.isMesh&&!o.userData.noInk&&!(o.material&&o.material.transparent))out.push(o);for(const c of o.children)walk(c);};
+    SURF.scene.children.forEach(walk);return out;
+  },
+  // where the camera is s seconds after it leaves the body
+  endCamAt(s,yaw,out,look){
+    const C=this.end.C,d=1.9*Math.exp(.428*s),el=lerp(.84,1.3,smoothstep(0,11,s)),ty=lerp(.85,.2,smoothstep(0,7,s));
+    look.set(C.x,C.y+ty,C.z);
+    out.set(look.x-Math.sin(yaw)*Math.cos(el)*d,look.y+Math.sin(el)*d,look.z-Math.cos(yaw)*Math.cos(el)*d);
+    return d;
+  },
+  // choose the direction to rise in so that nothing up there hides the small figure
+  endSearch(n){
+    const E=this.end;if(E.best)return;const head=V3(E.C.x,E.C.y+1.25,E.C.z),cam=V3(),look=V3(),dir=V3();
+    const S=[1.4,2.8,4.2,5.6,7,8.4,9.8,11.2,12.4];
+    while(n-->0){
+      if(E.ci>=E.cands.length){let bs=1e9;for(const c of E.cands){const sc=c.hits*10+Math.abs(angDiff(E.yaw0,c.yaw));if(sc<bs){bs=sc;E.best=c;}}return;}
+      const c=E.cands[E.ci];this.endCamAt(S[E.si],c.yaw,cam,look);dir.copy(cam).sub(head);const L=dir.length();dir.divideScalar(L);
+      E.ray.set(head,dir);E.ray.near=.25;E.ray.far=L;if(E.ray.intersectObjects(E.occ,false).length)c.hits++;
+      if(++E.si>=S.length){E.si=0;E.ci++;}
+    }
+  },
+  endCut(){
+    const E=this.end;E.cut=true;while(!E.best)this.endSearch(64);E.yaw=E.best.yaw;
+    const m=this.playerModel,C=E.C;m.root.visible=true;m.root.traverse(o=>o.layers.set(0));
+    m.root.position.copy(C);m.root.rotation.set(0,Math.atan2(-Math.sin(E.yaw),-Math.cos(E.yaw)),0);m.walk=0;m.crouch=0;m.lean=0;if(m.pouch)m.pouch.visible=true;
+    // the pickaxe is left lying on the yard
+    const tool=ITEMS.pickaxe.mk();tool.rotation.order='YXZ';tool.rotation.set(Math.PI/2,E.yaw+1.9,0);const side=E.yaw+Math.PI/2;
+    tool.position.set(C.x-Math.sin(side)*.55,C.y+.06,C.z-Math.cos(side)*.55);tool.traverse(o=>{if(o.isMesh)o.castShadow=true;});SURF.scene.add(tool);E.tool=tool;
+    AU.windOn();if(AU.ctx)AU.amb.gain.setTargetAtTime(0,AU.ctx.currentTime,1.8);
+  },
+  // 팔짝팔짝: hands up toward the sky, landing a little heavier each time the legs give
+  animHop(dt,s){
+    const E=this.end,m=this.playerModel,C=E.C;E.hopPh+=dt/.74;const ph=E.hopPh%1;
+    const air=ph>.16&&ph<.84,k=air?(ph-.16)/.68:0,H=.4-.05*G.age,lift=air?Math.sin(k*Math.PI):0;
+    m.root.position.set(C.x,C.y+lift*H,C.z);
+    const crouch=ph<.16?Math.sin(ph/.16*Math.PI):ph>.84?Math.sin((ph-.84)/.16*Math.PI)*.8:0;
+    m.body.position.y=-crouch*.06;m.body.rotation.x=m.stoop*.3-.1+crouch*.16;
+    m.body.scale.set(1+.08*crouch-.03*lift,1-.11*crouch+.06*lift,1+.08*crouch-.03*lift);
+    m.legL.rotation.x=air?.34*lift:-.45*crouch;m.legR.rotation.x=air?.22*lift:-.45*crouch;
+    // both hands up and waving at the sky
+    const wave=Math.sin(s*9.5)*.22;
+    m.armL.rotation.set(-2.85-.2*lift,0,-.26-.16*lift+wave);m.armR.rotation.set(-2.85-.2*lift,0,.26+.16*lift+wave);
+    m.headG.rotation.set(-.62-.12*lift,0,0);
+    if(air)E.wasAir=true;else if(E.wasAir){E.wasAir=false;const d=camera.position.distanceTo(m.root.position);AU.hop(Math.min(1,Math.pow(2.8/Math.max(d,.1),1.15)));}
+  },
+  updateEnding(dt,t){
+    const E=this.end;E.t+=dt;const T=E.t;
+    if(!E.best)this.endSearch(6);
+    P.pos.copy(E.C);
+    if(T<2.4){
+      // still in my own eyes: look up at the sky
+      const k=easeInOut(clamp(T/1.9,0,1));P.pitch=lerp(E.pitch0,.9,k);P.yaw=E.yaw0+angDiff(E.yaw0,E.skyYaw)*k;P.camY=lerp(E.camY0,E.C.y+P.eye,Math.min(1,T*3));
+      camera.position.set(E.C.x,P.camY,E.C.z);camera.rotation.set(P.pitch,P.yaw,0);
+    }else{
+      if(!E.cut)this.endCut();
+      const s=T-2.4,d=this.endCamAt(s,E.yaw,camera.position,E.look);camera.lookAt(E.look);
+      const near=clamp(d*.02,.04,3);if(Math.abs(camera.near-near)>1e-3){camera.near=near;camera.updateProjectionMatrix();}
+      this.animHop(dt,s);
+      E.windT-=dt;if(E.windT<=0){E.windT=.25;AU.windSet(lerp(.035,.12,smoothstep(0,10,s)),lerp(380,860,smoothstep(0,12,s)));}
+      if(s>=12.6){this.finishEnding();return;}
+    }
+    Surface.playerPos.copy(E.C);Surface.update(dt,t);
+  },
+  finishEnding(){
+    const E=this.end;if(!E||E.done)return;E.done=true;G.ended=true;
+    AU.windOff(.06);AU.stopAmb(.1);
+    const m=this.playerModel;m.root.visible=false;m.root.position.copy(E.C);m.body.position.y=0;m.body.rotation.x=0;m.body.scale.set(1,1,1);
+    if(E.tool){SURF.scene.remove(E.tool);dispose(E.tool);E.tool=null;}
+    camera.near=.04;camera.updateProjectionMatrix();
+    P.pos.copy(E.C);P.vel.set(0,0,0);P.grounded=true;P.yaw=E.yaw0;P.pitch=-.3;P.camY=P.pos.y+P.eye;this.lastTop.copy(E.C);
+    G.state='surface';this.sceneKey='surface';Save.flush(true);
+    G.state='endTitle';this.end=null;
+    document.body.classList.remove('ending');$('endShield').classList.remove('on');
+    const b=$('startBtn');b.disabled=false;b.textContent='이어하기';$('newGameBtn').hidden=false;$('newGameBtn').disabled=false;$('title').classList.remove('hide');
+  },
+  resumeAfterEnding(){
+    AU.init();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();
+    $('title').classList.add('hide');this.sceneKey='surface';G.state='surface';
+    Input.wantLock=!G.touch;if(!G.touch&&canvas.requestPointerLock){try{const r=canvas.requestPointerLock();if(r?.catch)r.catch(()=>{});}catch(e){}}
+    Input.release();Input.enabled=true;View.visible=true;View.mode='idle';View.swingT=-1;
+    P.vel.set(0,0,0);P.camY=P.pos.y+P.eye;this.setCam();
+    UI.showPouch(true);UI.cross(true);UI.digBtn(true);UI.act(null);UI.hint(null);
+    AU.startAmb(G.era,.8);AU.setMuffle(false);
   },
   // ----- endings -----
   startFinal(){
@@ -3379,11 +3629,12 @@ const Game={
     if(this.tr)this.updateTransition(dt,t);
     else if(st==='surface')this.updateSurface(dt,t);
     else if(st==='hut'||st==='craft')this.updateHut(dt,t);
+    else if(st==='ending')this.updateEnding(dt,t);
     else if(st==='finalEnd')this.updateFinal(dt,t);
     else if(st==='hutPan')this.updateHutPan(dt,t);
     else if(st==='leaveEnd')this.updateLeave(dt,t);
     else if(st==='intro')this.updateIntro(dt,t);
-    else if(st==='title'){const a=0.55+Math.sin(t*0.07)*0.45;const hp=Surface.hutPos;const cp=new THREE.Vector3(hp.x+Math.sin(a)*8.2,1.25,hp.z+Math.cos(a)*8.2);const yp=lookAtYP(cp,new THREE.Vector3(hp.x+0.4,1.35,hp.z+1.2));camera.position.copy(cp);camera.rotation.set(yp.pitch,yp.yaw,0);Surface.playerPos.copy(P.pos);Surface.update(dt,t);}
+    else if(st==='title'||st==='endTitle'){const a=0.55+Math.sin(t*0.07)*0.45;const hp=Surface.hutPos;const cp=new THREE.Vector3(hp.x+Math.sin(a)*8.2,1.25,hp.z+Math.cos(a)*8.2);const yp=lookAtYP(cp,new THREE.Vector3(hp.x+0.4,1.35,hp.z+1.2));camera.position.copy(cp);camera.rotation.set(yp.pitch,yp.yaw,0);Surface.playerPos.copy(P.pos);Surface.update(dt,t);}
     else if(st==='toHut'||st==='toSurface'){if(this.sceneKey==='surface')Surface.update(dt,t);else Hut.update(dt,t);}
     else if(st==='end'){}
     if(!Number.isFinite(View.walk))View.walk=0;
@@ -3562,7 +3813,7 @@ const Save={
     ['era','maxEra','tool','digs','surfacings','descents'].forEach(k=>ok(Number.isInteger(g[k])));ok(g.maxEra>=g.era);
     this.flags.forEach(k=>ok(typeof g[k]==='boolean'));ok(list(g.pouch,junk,POUCH)&&g.got&&typeof g.got==='object'&&!Array.isArray(g.got));Object.entries(g.got).forEach(([k,v])=>ok(junk(k)&&typeof v==='boolean'));
     ok(['surface','hut'].includes(pl.scene)&&vec(pl.pos)&&num(pl.pos[1],TG.y0-0.5,10)&&num(pl.yaw,-1e8,1e8)&&num(pl.pitch,-1.6,1.6)&&typeof pl.crafting==='boolean');
-    ok(vec(d.lastTop)&&num(d.lastEraDig,0,g.digs)&&typeof d.card==='boolean');ok(d.memorySeen===undefined||typeof d.memorySeen==='boolean');
+    ok(vec(d.lastTop)&&num(d.lastEraDig,0,g.digs)&&typeof d.card==='boolean');ok(d.memorySeen===undefined||typeof d.memorySeen==='boolean');ok(d.memory===undefined||(Array.isArray(d.memory)&&d.memory.length===3&&d.memory.every(v=>typeof v==='boolean')));ok(d.ended===undefined||typeof d.ended==='boolean');
     let count=0;const orders=new Set(),origin=o=>{ok(o&&junk(o.id)&&num(o.x,-3,3)&&num(o.z,-3,3)&&typeof o.slot==='boolean'&&Number.isInteger(o.order)&&o.order>=0&&!orders.has(o.order));orders.add(o.order);};
     ok(list(d.hut,it=>{origin(it);ok(num(it.rotation,-1e8,1e8));ok(list(it.parts,(p,i)=>{count++;ok(junk(p.id)&&vec(p.p,3,5000)&&vec(p.q,4,1.01)&&Math.abs(Math.hypot(...p.q)-1)<0.01);if(i){origin(p.origin);ok(p.origin.id===p.id);}else ok(p.id===it.id);return true;})&&it.parts.length>0);return true;}));ok(count<=50000&&d.hut.filter(it=>it.slot).length<=Hut.slots.length);
     ok(list(inn.pool,a=>list(a,junk,44),3)&&inn.pool.length===3&&typeof inn.poolCd==='boolean'&&typeof inn.poolCap==='boolean');
@@ -3574,8 +3825,8 @@ const Save={
     if(!['surface','hut','craft','climb','toHut','toSurface','intro'].includes(G.state))return null;
     const g={};[...this.numbers,...this.flags].forEach(k=>g[k]=G[k]);g.pouch=G.pouch.slice();g.got={...G.got};
     const origin=it=>({id:it.id,x:it.x,z:it.z,slot:!!it.slot,order:it.order});
-    const pos=Game.tr?.kind==='climb'?Game.tr.to:P.pos;
-    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,memorySeen:MemoryFigure.seen,
+    const pos=Game.tr&&(Game.tr.kind==='climb'||Game.tr.kind==='fade')?Game.tr.to:P.pos;
+    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,memorySeen:!!Memory.figs[0]?.seen,memory:Memory.figs.map(f=>!!f.seen),ended:!!G.ended,
       hut:Hut.items.map(it=>({...origin(it),rotation:it.mesh.rotation.y,parts:Assemblage.parts(it).map(p=>({id:p.id,p:p.p.slice(),q:p.q.slice(),...(p.origin?{origin:{...p.origin}}:{})}))})),
       inner:{pool:Inner.pool.map(p=>p.slice()),poolCd:Inner.poolCd,poolCap:Inner.poolCap,sinceFind:Inner.sinceFind||0,nextFind:Inner.nextFind,tinks:Inner.tinks,
         items:Inner.items.map(it=>({id:it.id,pos:it.pos.toArray(),state:it.state,tool:!!it.tool,requiredTool:it.requiredTool||0})),
@@ -3603,8 +3854,8 @@ const Save={
   },
   restore(){
     const s=this.saved;if(!s)throw Error('no save');this.validate(s);const field=s.field||decodeTerrain(s.terrain,s.version===1?71*OLD_NY*71:TF.length),d=s.state,g=d.g;
-    if(s.version===1)Terrain.restoreLegacy(field);else TF.set(field);AIRCNT.fill(0);Terrain.deepY=0;
-    MemoryFigure.restore(!!d.memorySeen);
+    if(s.version===1)Terrain.restoreLegacy(field);else{TF.set(field);Terrain.carvePockets();}AIRCNT.fill(0);Terrain.deepY=0;
+    Memory.restore(Array.isArray(d.memory)?d.memory:[!!d.memorySeen,false,false]);G.ended=!!d.ended;
     for(let k=0;k<TNZ;k++)for(let j=0;j<TNY;j++){const y=TG.y0+j*VS;if(y>=0)continue;for(let i=0;i<TNX;i++)if(TF[TI(i,j,k)]<=0){AIRCNT[i+TNX*j]++;if(CaveLayout.pocketDistance(TG.x0+i*VS,y,TG.z0+k*VS)>0)Terrain.deepY=Math.min(Terrain.deepY,y);}}
     const cleared=Terrain.clearDetached();
     Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(Infinity);Terrain.revision=cleared?1:0;
