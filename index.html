@@ -1027,6 +1027,116 @@ function keyring(){
   const st=M(new THREE.ExtrudeGeometry(s,{depth:0.008,bevelEnabled:true,bevelThickness:0.003,bevelSize:0.003,bevelSegments:2}),mat(0xffd23a,{roughness:0.3,env:0.3}));st.rotation.x=-Math.PI/2;st.position.set(0.112,0,0.004);g.add(st);
   return g;
 }
+// ---- keepsakes: finds that feel like discovering yourself. They never get a shelf slot. ----
+function cloverCard(){
+  const R=itemRandom,W=0.07,H=0.112,g=new THREE.Group();
+  const tex=canvasTex(160,256,(c,w,h)=>{
+    c.fillStyle='#f6efdc';c.fillRect(0,0,w,h);
+    const st=c.createRadialGradient(w*.72,h*.78,4,w*.72,h*.78,74);st.addColorStop(0,'rgba(170,130,70,.3)');st.addColorStop(1,'rgba(170,130,70,0)');c.fillStyle=st;c.fillRect(0,0,w,h);
+    c.fillStyle='#cdbf9f';c.beginPath();c.arc(w/2,22,8,0,7);c.fill();
+    c.strokeStyle='#4f7a32';c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(w/2,140);c.quadraticCurveTo(w/2+10,190,w/2-4,226);c.stroke();
+    const leaf=a=>{c.save();c.translate(w/2,134);c.rotate(a);c.fillStyle='#3f8a35';c.beginPath();
+      c.moveTo(0,0);c.bezierCurveTo(-31,-18,-35,-53,-12,-57);c.bezierCurveTo(-2,-59,0,-47,0,-41);c.bezierCurveTo(0,-47,2,-59,12,-57);c.bezierCurveTo(35,-53,31,-18,0,0);c.fill();
+      c.strokeStyle='rgba(205,236,172,.75)';c.lineWidth=2;c.beginPath();c.moveTo(0,-4);c.lineTo(0,-39);c.stroke();
+      c.fillStyle='rgba(222,244,196,.35)';c.beginPath();c.ellipse(-11,-35,6,10,.4,0,7);c.fill();c.restore();};
+    [0.08,Math.PI/2+0.03,Math.PI-0.05,-Math.PI/2+0.06].forEach(leaf);
+    c.fillStyle='rgba(80,112,52,.6)';c.beginPath();c.arc(w/2,134,5,0,7);c.fill();
+    for(let i=0;i<60;i++){c.fillStyle='rgba(120,100,70,.12)';c.fillRect(R()*w,R()*h,2,2);}
+  });
+  const sh=new THREE.Shape();rrectShape(sh,-W/2,-H/2,W,H,0.008);
+  const card=new THREE.ExtrudeGeometry(sh,{depth:0.0012,bevelEnabled:false});
+  const uv=card.attributes.uv,pp=card.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,(pp.getX(i)+W/2)/W,(pp.getY(i)+H/2)/H);
+  g.add(M(card,texM(tex)));
+  const lsh=new THREE.Shape();rrectShape(lsh,-W/2-.004,-H/2-.004,W+.008,H+.008,0.011);
+  const lam=new THREE.Mesh(new THREE.ExtrudeGeometry(lsh,{depth:0.0028,bevelEnabled:false}),TM({color:0xffffff,transparent:true,opacity:.22,depthWrite:false}));lam.position.z=-0.0008;g.add(lam);
+  // a satin ribbon tied through the punched hole
+  const red=mat(0xd8434f),hy=H/2-.0096;
+  [[-0.5,.05],[0.32,.043]].forEach(([a,l])=>{const t=M(new THREE.BoxGeometry(.0062,l,.0008),red);t.position.set(-Math.sin(a)*l/2,hy+Math.cos(a)*l/2,.0026);t.rotation.z=a;g.add(t);
+    const end=M(new THREE.BoxGeometry(.0062,.004,.0008),red);end.position.set(-Math.sin(a)*(l+.001),hy+Math.cos(a)*(l+.001),.0026);end.rotation.z=a+.5;g.add(end);});
+  const knot=M(new THREE.SphereGeometry(.0052,10,8),red);knot.scale.z=.55;knot.position.set(0,hy,.003);g.add(knot);
+  g.rotation.x=-Math.PI/2;const w=new THREE.Group();w.add(g);w.rotation.y=0.3;return w;
+}
+function heartStone(){
+  const R=itemRandom,k=0.034,s=new THREE.Shape();
+  s.moveTo(0,-k*1.15);s.bezierCurveTo(k*.55,-k*.6,k*1.3,-k*.1,k*1.05,k*.55);s.bezierCurveTo(k*.85,k*1.08,k*.22,k*1.08,0,k*.58);
+  s.bezierCurveTo(-k*.22,k*1.08,-k*.85,k*1.08,-k*1.05,k*.55);s.bezierCurveTo(-k*1.3,-k*.1,-k*.55,-k*.6,0,-k*1.15);
+  const geo=new THREE.ExtrudeGeometry(s,{depth:0.003,bevelEnabled:true,bevelThickness:0.01,bevelSize:0.009,bevelSegments:7,curveSegments:30});geo.center();
+  // worn by water rather than cut: soft and a little lopsided
+  const p=geo.attributes.position,bumps=[...Array(7)].map(()=>[R()*.08-.04,R()*.08-.04,R()*.02-.01,R()*.004+.001]);
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);let d=0;for(const b of bumps){const q=Math.hypot(x-b[0],y-b[1],z-b[2]);d+=b[3]*Math.exp(-q*q/.0006);}
+    const n=Math.hypot(x,y,z*1.6)||1;p.setXYZ(i,x+x/n*d,y+y/n*d,z*.95+z/n*d+(z>0?Math.max(0,.0045-Math.hypot(x,y)*.06):0));}
+  geo.computeVertexNormals();
+  const tex=canvasTex(128,128,(c,w,h)=>{c.fillStyle='#a69c8e';c.fillRect(0,0,w,h);
+    for(let i=0;i<520;i++){c.fillStyle=R()<.5?'rgba(78,70,62,.35)':'rgba(232,226,214,.42)';c.fillRect(R()*w,R()*h,1+R()*2,1+R()*2);}
+    c.strokeStyle='rgba(242,238,228,.6)';c.lineWidth=3;c.beginPath();c.moveTo(0,h*.6);c.bezierCurveTo(w*.3,h*.48,w*.62,h*.76,w,h*.56);c.stroke();});
+  const uv=geo.attributes.uv;for(let i=0;i<uv.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);uv.setXY(i,.5+(x+z*.7)/.1,.5+(y-z*.7)/.1);}
+  const m=M(geo,texM(tex));m.rotation.x=-Math.PI/2+0.06;const g=new THREE.Group();g.add(m);return g;
+}
+function mirrorShard(){
+  const g=new THREE.Group(),C=[0,.06],Rr=.085,a0=-2.25,a1=-.85;
+  const s=new THREE.Shape();s.moveTo(C[0]+Math.cos(a0)*Rr,C[1]+Math.sin(a0)*Rr);s.absarc(C[0],C[1],Rr,a0,a1,false);
+  [[.034,.018],[.016,.006],[.006,.032],[-.014,.014],[-.03,.027],[-.04,.004]].forEach(([x,y])=>s.lineTo(x,y));s.closePath();
+  g.add(M(new THREE.ExtrudeGeometry(s,{depth:.003,bevelEnabled:false,curveSegments:20}),mat(0x6d6a72)));
+  const glass=new THREE.Mesh(new THREE.ShapeGeometry(s,20),new THREE.MeshStandardMaterial({color:0xdfe9f4,metalness:1,roughness:.06,envMap:ENVTEX,envMapIntensity:1.4}));glass.position.z=.0032;glass.castShadow=true;g.add(glass);
+  [[-.012,.002,.75,.046],[.018,.004,-.55,.03],[.0,-.012,.2,.026]].forEach(([x,y,a,l])=>{const b=M(new THREE.BoxGeometry(l,.0011,.0006),mat(0x3d3d48));b.position.set(x,y,.0036);b.rotation.z=a;g.add(b);});
+  // the pink plastic rim of the hand mirror is still on the round edge
+  const fr=M(new THREE.TorusGeometry(Rr+.002,.0055,6,24,a1-a0),plasticM(0xf2a3c4));fr.position.set(C[0],C[1],.0015);fr.rotation.z=a0;fr.scale.z=.75;g.add(fr);
+  g.rotation.x=-Math.PI/2;const w=new THREE.Group();w.add(g);w.rotation.y=-0.4;return w;
+}
+function meltedCandle(){
+  // a jar candle burned halfway down: wax sunk in the glass, soot on the glass above it
+  const R=itemRandom,g=new THREE.Group(),r=.036,Hh=.078,wl=.036;
+  const glass=TM({color:0xeaf4f6,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false});
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(r,r,Hh,36,1,true),glass);wall.position.y=Hh/2;g.add(wall);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.98,.005,36),TM({color:0xdfeef1,transparent:true,opacity:.55,depthWrite:false}));base.position.y=.0025;g.add(base);
+  const rim=M(new THREE.TorusGeometry(r-.0012,.0022,8,40),mat(0xe4eff1));rim.rotation.x=Math.PI/2;rim.position.y=Hh;g.add(rim);
+  const sootTex=canvasTex(128,64,(c,w,h)=>{c.clearRect(0,0,w,h);
+    for(let y=0;y<h;y++){const k=1-y/h;c.fillStyle=`rgba(46,40,38,${(.12+.5*Math.pow(1-k,1.4)).toFixed(3)})`;c.fillRect(0,y,w,1);}
+    for(let i=0;i<70;i++){c.fillStyle=`rgba(30,26,24,${(R()*.22).toFixed(2)})`;c.beginPath();c.ellipse(R()*w,R()*h*.7,3+R()*8,2+R()*5,0,0,7);c.fill();}});
+  const soot=new THREE.Mesh(new THREE.CylinderGeometry(r-.0034,r-.0034,Hh-wl-.004,36,1,true),TM({map:sootTex,color:0xffffff,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  soot.position.y=wl+(Hh-wl-.004)/2;g.add(soot);
+  const waxM=mat(0xc8aeea),body=M(new THREE.CylinderGeometry(r-.0034,r-.0034,wl-.005,36,1,true),waxM);body.position.y=(wl+.005)/2;g.add(body);
+  const top=M(new THREE.CircleGeometry(r-.0034,36),waxM);top.rotation.x=-Math.PI/2;top.position.y=wl;g.add(top);
+  const ring=M(new THREE.TorusGeometry(.0175,.0012,6,32),mat(0xb596e0));ring.rotation.x=Math.PI/2;ring.position.y=wl+.0002;ring.scale.z=.5;g.add(ring);
+  const wick=M(new THREE.CylinderGeometry(.0011,.0013,.009,6),mat(0x2a1f18));wick.position.set(.0012,wl+.0036,0);wick.rotation.z=-.3;g.add(wick);
+  const tip=M(new THREE.SphereGeometry(.0018,6,5),mat(0x0e0b09));tip.position.set(.0026,wl+.0078,0);g.add(tip);
+  const labelTex=canvasTex(128,64,(c,w,h)=>{c.fillStyle='#f4ecd8';c.fillRect(0,0,w,h);c.strokeStyle='#9b86c4';c.lineWidth=3;c.strokeRect(4,4,w-8,h-8);
+    c.strokeStyle='#5f8a4a';c.lineWidth=2;c.beginPath();c.moveTo(24,52);c.quadraticCurveTo(26,30,30,12);c.stroke();
+    c.fillStyle='#8c6cc8';for(let i=0;i<7;i++){c.beginPath();c.ellipse(29-i*.2+(i%2?3:-3),14+i*5,3.2,2.4,0,0,7);c.fill();}
+    c.fillStyle='#6d5a8f';c.fillRect(46,22,62,6);c.fillStyle='#a99ab8';c.fillRect(46,36,48,4);c.fillRect(46,45,54,4);});
+  const label=new THREE.Mesh(new THREE.CylinderGeometry(r+.0005,r+.0005,.026,24,1,true,-.7,1.4),texM(labelTex));label.position.y=.022;g.add(label);
+  g.rotation.y=-.5;return g;
+}
+function bookPage(){
+  const R=itemRandom,W=.1,H=.14;
+  const tex=canvasTex(200,280,(c,w,h)=>{c.fillStyle='#f3ead2';c.fillRect(0,0,w,h);
+    const gr=c.createLinearGradient(0,0,w,0);gr.addColorStop(0,'rgba(150,120,70,.25)');gr.addColorStop(.15,'rgba(150,120,70,0)');c.fillStyle=gr;c.fillRect(0,0,w,h);
+    c.fillStyle='#8a8170';c.fillRect(60,14,80,4);c.fillRect(92,264,16,5);
+    for(let i=0;i<17;i++){const y=34+i*13,len=i%6===5?90:150-((i*23)%24);c.fillStyle='#5a5448';c.fillRect(22,y,len,4);}
+    c.fillStyle='rgba(255,232,40,.6)';c.fillRect(18,108,152,10);c.fillRect(18,121,118,10);
+    c.strokeStyle='#2c4ea8';c.lineWidth=2;c.beginPath();c.moveTo(22,195);c.lineTo(160,196);c.stroke();c.beginPath();c.moveTo(22,199);c.lineTo(150,200);c.stroke();
+    c.lineWidth=1.6;starPath(c,182,114,8,3.5,5);c.stroke();
+    for(let i=0;i<40;i++){c.fillStyle='rgba(140,110,60,.1)';c.fillRect(R()*w,R()*h,3,3);}});
+  const geo=new THREE.PlaneGeometry(W,H,10,14),p=geo.attributes.position;
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);
+    if(x<-W/2+1e-4)p.setX(i,x+R()*.007);
+    const cu=Math.max(0,(x/W+.5)+(-y/H+.5)-1.1);p.setZ(i,cu*cu*.05+Math.sin(y*40)*.0012);}
+  geo.computeVertexNormals();
+  const m=M(geo,texM(tex,{side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;
+  const g=new THREE.Group();g.add(m);g.rotation.y=-.35;return g;
+}
+function glowStar(){
+  const R=itemRandom,s=new THREE.Shape();
+  for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.016:.04,x=Math.cos(a)*r,y=Math.sin(a)*r;i?s.lineTo(x,y):s.moveTo(x,y);}s.closePath();
+  const geo=new THREE.ExtrudeGeometry(s,{depth:.0025,bevelEnabled:true,bevelThickness:.0008,bevelSize:.0012,bevelSegments:2,curveSegments:4});
+  // the top point has peeled up where it came off the ceiling
+  const p=geo.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);if(y>.006){const k=(y-.006)/.034;p.setZ(i,p.getZ(i)+k*k*.024);}}
+  geo.computeVertexNormals();
+  const tex=canvasTex(64,64,(c,w,h)=>{c.fillStyle='#e8f7b0';c.fillRect(0,0,w,h);for(let i=0;i<40;i++){c.fillStyle='rgba(120,110,80,.28)';c.fillRect(R()*w,R()*h,1.5,1.5);}});
+  const uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,.5+p.getX(i)/.09,.5+p.getY(i)/.09);
+  const m=M(geo,TM({map:tex,color:0xffffff,emissive:0xa6e66e,emissiveIntensity:.42}));
+  const g=new THREE.Group();g.add(m);g.rotation.x=-Math.PI/2;const w=new THREE.Group();w.add(g);w.rotation.y=.4;return w;
+}
 // era litter
 function makePottery(c=0xc2743e,stripe=0x4a2c18){
   const g=new THREE.Group();
@@ -1136,6 +1246,13 @@ const ITEMS={
   keyring:  {name:'열쇠 없는 열쇠고리',r:3,band:2,mk:keyring},
   cd:       {name:'CD 조각',r:3,band:2,mk:cdShard},
   capsule:  {name:'빈 뽑기 캡슐',r:3,band:2,mk:()=>capsule(0xff8ab4)},
+  // keepsakes (they feel like a discovery; no shelf slot, kept by the bedding)
+  clover:    {name:'코팅된 네잎클로버',r:2,band:0,floor:true,tilt:.65,mk:cloverCard},
+  heartstone:{name:'하트 모양 돌멩이',r:2,band:0,floor:true,tilt:.4,mk:heartStone},
+  mirror:    {name:'깨진 손거울 조각',r:2,band:1,floor:true,tilt:.65,mk:mirrorShard},
+  candle:    {name:'반쯤 녹은 향초',r:2,band:1,floor:true,mk:meltedCandle},
+  page:      {name:'밑줄 친 책 한 장',r:3,band:2,floor:true,tilt:.65,mk:bookPage},
+  glowstar:  {name:'야광 별 스티커',r:3,band:2,floor:true,tilt:.65,mk:glowStar},
   // fallen litter
   potshard: {name:'깨진 토기 조각',r:1,litter:1,mk:()=>makePottery()},
   fishbone: {name:'생선 뼈',r:1,litter:1,mk:fishBone},
@@ -1167,6 +1284,12 @@ const LINES=[
   ['친한 사람이 잘되면 축하하면서 배가 아프다.','누가 아프다고 하면 얼마나 귀찮아질지부터 생각한다.','남이 망한 이야기를 일부러 찾아 읽는다.','사과하면서 속으로는 내가 맞다고 생각한다.'],
 ];
 const LITTER_LINES={potshard:'누가 깨뜨리고 갔다.',fishbone:'누가 발라 먹고 던졌다.',coinold:'누가 흘린 줄도 모르고 갔다.',porcelain:'누가 깨고 발로 밀어 넣었다.',butt:'누가 피우다 튕겼다.',nail:'누가 박다 흘렸다.',glassbit:'누가 마시고 깼다.',capwhite:'누가 따서 던졌다.',snackchoco:'누가 걸어가며 먹고 놓았다.',strawblue:'누가 다 쓰고 뱉었다.',part:'위에서 뭘 고치다 떨어뜨렸다.',chip:'위에서는 이제 안 쓰는 것.'};
+// what it feels like to finally understand yourself, by depth; each keepsake gets one per run
+const INSIGHT_LINES=[
+  ['나는 생각보다 예민한 사람이다.','나는 혼자 있어야 충전되는 사람이다.','나는 비 오는 날을 좋아하는 사람이었다.','나는 남들보다 감정이 깊은 편이다.'],
+  ['그때 화가 났던 건 사실 서운해서였다.','나는 늘 인정받고 싶었던 것 같다.','내가 사람을 피하는 건 상처받기 싫어서다.','나는 너무 착해서 늘 손해를 본다.'],
+  ['결국 모든 건 어린 시절에서 시작됐다.','내 안에는 아직 울고 있는 아이가 있다.','나는 나를 사랑하는 법을 몰랐다.','이제야 나를 조금 알 것 같다.'],
+];
 // per-run assignment: lines and positions
 function setupFinds(){
   const finds=[];
@@ -1174,12 +1297,14 @@ function setupFinds(){
   for(const id in ITEMS){const it=ITEMS[id];if(it.band!==undefined)bands[it.band].push(id);}
   // band 0
   const b0=shuffle(bands[0]),l0=shuffle(LINES[0]);
-  b0.forEach((id,i)=>{ITEMS[id].d=l0[i%l0.length];});
+  const told=id=>!ITEMS[id].floor;
+  b0.filter(told).forEach((id,i)=>{ITEMS[id].d=l0[i%l0.length];});
   const b1=shuffle(bands[1]),l1=shuffle(LINES[1]);
-  b1.forEach((id,i)=>{ITEMS[id].d=l1[i%l1.length];});
+  b1.filter(told).forEach((id,i)=>{ITEMS[id].d=l1[i%l1.length];});
   const deepFixed=['cd','capsule'];
   const b2=shuffle(bands[2].filter(id=>!deepFixed.includes(id))),l2=shuffle(LINES[2]);
-  b2.forEach((id,i)=>{ITEMS[id].d=l2[i%l2.length];});
+  b2.filter(told).forEach((id,i)=>{ITEMS[id].d=l2[i%l2.length];});
+  const ins=INSIGHT_LINES.map(l=>shuffle(l));for(const id in ITEMS){const it=ITEMS[id];if(it.floor)it.d=ins[it.band].pop();}
   ITEMS.cd.d='위로하면서 속으로는 나는 저 정도는 아니라고 생각한다.';
   ITEMS.capsule.d='고맙다는 말을 못 들으면 해 준 걸 계속 기억한다.';
   return {b0,b1,b2};
@@ -1207,7 +1332,7 @@ function renderIcons(){
   const d=new THREE.DirectionalLight(0xffffff,1.7);d.position.set(2,3,2);sc.add(d);
   const cam=new THREE.PerspectiveCamera(30,1,0.1,10);cam.position.set(0.5,0.85,1.05);cam.lookAt(0,0,0);
   for(const id in ITEMS){
-    const g=makeItemMesh(id);swapEnv(g,env);
+    const g=makeItemMesh(id);g.rotation.x=ITEMS[id].tilt||0;swapEnv(g,env);
     const w=fitObject(g,0.56);sc.add(w);r.render(sc,cam);ITEMS[id].icon=r.domElement.toDataURL();sc.remove(w);
   }
   pm.dispose();env.dispose();r.dispose();try{r.forceContextLoss();}catch(e){}
@@ -2085,7 +2210,7 @@ const Hut={
       // thumb-pressed lumps along every edge and at both ends, so it reads as made by hand
       TI2.forEach(([a,b,y],ti)=>{for(let k=0;k<11;k++){const ph=Math.PI-ARC+ARC*2*(k+rr(0.2,0.8))/11;const lp=sph(rr(0.03,0.045),0xc89a62,{roughness:1},7,5);lp.scale.y=0.55;lp.position.set(Math.sin(ph)*(a+0.012),y-0.012,Math.cos(ph)*(a+0.012));lp.castShadow=false;S.add(lp);}
         [-1,1].forEach(e=>{const ph=Math.PI+e*ARC;const en=sph(0.16,0xba8248,{roughness:1},9,7);en.scale.set(1,0.9,1);en.position.set(Math.sin(ph)*(a+b)/2,y-0.06,Math.cos(ph)*(a+b)/2);S.add(en);});});
-      const capacity=Object.values(ITEMS).filter(it=>!it.tool&&!it.special).length;
+      const capacity=Object.values(ITEMS).filter(it=>!it.tool&&!it.special&&!it.floor).length;
       for(let n=0;n<capacity;n++){const ti=Math.floor(n/11),col=n%11;const [a,b,y]=TI2[Math.min(3,ti)];const rc=(a+b)/2;const ph=Math.PI-ARC*0.9+(col+0.5)/11*ARC*1.8;
         const x=Math.sin(ph)*rc,z=Math.cos(ph)*rc;
         this.slots.push({x,y,z,ph});}}
@@ -2097,11 +2222,26 @@ const Hut={
   update(dt,t){
     this.fire[0].scale.set(1+Math.sin(t*13)*0.12,1+Math.sin(t*9.3)*0.18,1);this.fire[1].scale.set(1+Math.sin(t*11+1)*0.15,1+Math.sin(t*14.7)*0.2,1);
     this.fireLight.intensity=3.0+Math.sin(t*12)*0.35+Math.sin(t*5.1)*0.25;
-    for(let i=this.drops.length-1;i>=0;i--){const d=this.drops[i];d.t+=dt;const k=Math.min(1,d.t/0.35);d.mesh.position.y=(d.base||0)+d.y0*(1-k)+Math.abs(Math.sin(k*Math.PI*2))*0.05*(1-k);if(k>=1){d.mesh.position.y=d.base||0;this.drops.splice(i,1);}}
+    for(let i=this.drops.length-1;i>=0;i--){const d=this.drops[i];
+      if(d.fly){const f=d.fly;f.t+=dt;d.mesh.visible=f.t>=0;if(f.t<0)continue;const k=Math.min(1,f.t/f.dur),e=k*k*(3-2*k);
+        d.mesh.position.lerpVectors(f.from,f.to,e);d.mesh.position.y+=4*f.h*k*(1-k);d.mesh.rotation.y=f.ry-(1-e)*2.2;
+        if(k>=1){d.fly=null;d.t=0;d.mesh.rotation.y=f.ry;AU.place();}continue;}
+      d.t+=dt;const k=Math.min(1,d.t/0.35);d.mesh.position.y=(d.base||0)+d.y0*(1-k)+Math.abs(Math.sin(k*Math.PI*2))*0.05*(1-k);if(k>=1){d.mesh.position.y=d.base||0;this.drops.splice(i,1);}}
   },
   inShelf(px,pz){return pz<0&&Math.abs(Math.atan2(px,-pz))<this.shelfArc+0.12;},
+  // beside the pillow end of the bedding: one of each keepsake, in the order they were brought in
+  keepSpots:[[-1.98,.55],[-1.62,.42],[-2.05,.25],[-1.7,.12],[-2.03,-.05],[-1.68,-.18]],
+  keepsakeSpot(id){
+    if(this.items.some(it=>!it.slot&&it.id===id&&this.keepSpots.some(([x,z])=>Math.hypot(it.x-x,it.z-z)<.05)))return null;
+    return this.keepSpots.find(([x,z])=>!this.items.some(it=>!it.slot&&Math.hypot(it.x-x,it.z-z)<.24))||null;
+  },
+  // carried over from the hand in a slow arc, so it is clear where it went even when the bed is off screen
+  fly(it,from,delay=0){
+    const to=new THREE.Vector3(it.x,0,it.z),d=from.distanceTo(to);it.mesh.position.copy(from);it.mesh.visible=false;
+    this.drops.push({mesh:it.mesh,t:0,y0:0,fly:{t:-delay,dur:clamp(0.5+d*0.14,0.65,1.0),from:from.clone(),to,h:0.2+d*0.07,ry:it.mesh.rotation.y}});
+  },
   nearShelf(px,pz){const r=Math.hypot(px,pz);return r>=1.15&&r<=1.5&&pz<0&&Math.abs(Math.atan2(px,-pz))<=this.shelfArc;},
-  okSpot(px,pz,gap){const r=Math.hypot(px,pz);if(r>this.R-0.3||r<0.9)return false;if(this.inShelf(px,pz)&&r>1.38)return false;if(px<-0.85&&pz>0.3&&pz<1.7)return false;if(px>1.2&&pz>0.45&&pz<1.35)return false;if(Math.abs(px)<0.7&&pz>1.7)return false;
+  okSpot(px,pz,gap){const r=Math.hypot(px,pz);if(r>this.R-0.3||r<0.9)return false;if(px<-1.38&&pz>-0.42&&pz<0.72)return false;if(this.inShelf(px,pz)&&r>1.38)return false;if(px<-0.85&&pz>0.3&&pz<1.7)return false;if(px>1.2&&pz>0.45&&pz<1.35)return false;if(Math.abs(px)<0.7&&pz>1.7)return false;
     for(const it of this.items)if(!it.slot&&Math.hypot(it.x-px,it.z-pz)<gap)return false;return true;},
   freeSpot(x,z){
     for(const gap of [0.42,0.32,0.22]){
@@ -2112,7 +2252,7 @@ const Hut={
   },
   place(id,x,z,animate=true,exact=false){
     const spot=exact?[x,z]:this.freeSpot(x,z);
-    const m=fitObject(Assemblage.component(id),0.26);m.userData.itemId=id;
+    const m=fitObject(Assemblage.component(id),ITEMS[id].floor?0.22:0.26);m.userData.itemId=id;
     const bb=new THREE.Box3().setFromObject(m);const lift=-bb.min.y;
     const holder=new THREE.Group();holder.add(m);m.position.y+=lift;holder.position.set(spot[0],animate?0.6:0,spot[1]);holder.rotation.y=Math.random()*6.28;holder.userData.itemId=id;
     this.itemsGroup.add(holder);const it={id,x:spot[0],z:spot[1],mesh:holder,order:this.serial++};holder.userData.placedItem=it;this.items.push(it);G.placed.push({id,x:spot[0],z:spot[1]});
@@ -2121,7 +2261,7 @@ const Hut={
   },
   // One of each kind, packed from the shelf's end; duplicates stay on the floor.
   placeSlot(id){
-    const item=ITEMS[id];if(!item||item.tool||item.special||this.displayedIds.has(id))return false;
+    const item=ITEMS[id];if(!item||item.tool||item.special||item.floor||this.displayedIds.has(id))return false;
     const sl=this.slots[this.items.filter(it=>it.slot).length];if(!sl)return false;
     const m=fitObject(Assemblage.component(id),0.2);m.userData.itemId=id;const bb=new THREE.Box3().setFromObject(m);
     const holder=new THREE.Group();holder.add(m);m.position.y-=bb.min.y;holder.position.set(sl.x,sl.y+0.5,sl.z);holder.rotation.y=sl.ph+Math.PI;holder.userData.itemId=id;
@@ -2131,7 +2271,7 @@ const Hut={
   rebuild(it){
     this.drops=this.drops.filter(d=>d.mesh!==it.mesh);
     for(const c of [...it.mesh.children]){it.mesh.remove(c);Assemblage.release(c);}
-    const parts=Assemblage.parts(it),size=it.slot?(parts.length>1?0.27:0.2):(parts.length>1?0.36:0.26);
+    const parts=Assemblage.parts(it),size=it.slot?(parts.length>1?0.27:0.2):(parts.length>1?0.36:ITEMS[it.id].floor?0.22:0.26);
     const m=fitObject(Assemblage.mesh(parts),size),bb=new THREE.Box3().setFromObject(m);m.position.y-=bb.min.y;it.mesh.add(m);it.mesh.userData.placedItem=it;
   },
   reflow(){
@@ -2835,7 +2975,7 @@ const View={
     let rx=this.restA[0],ry=this.restA[1],rz=0,lx=-1.2,ly=-0.3,lz=0,lvis=false,toolRot=0;
     // held item
     this.heldG.visible=this.mode==='idle';
-    if(!this.held&&this.heldQ.length){const id=this.heldQ.shift();const m=fitObject(makeItemMesh(id),0.2);this.heldG.add(m);this.held={m,t:0,dur:1.5};}
+    if(!this.held&&this.heldQ.length){const id=this.heldQ.shift();const hg=makeItemMesh(id);hg.rotation.x=ITEMS[id].tilt||0;const m=fitObject(hg,0.2);this.heldG.add(m);this.held={m,t:0,dur:1.5};}
     let holdK=0;
     if(this.held){const h=this.held;h.t+=dt;const k=h.t/h.dur;holdK=k<0.18?easeOut(k/0.18):k>0.8?1-easeIn((k-0.8)/0.2):1;
       h.m.rotation.y+=dt*1.6;h.m.rotation.x=Math.sin(t*1.3)*0.25;
@@ -3032,9 +3172,9 @@ const UI={
       $('attachTilt').addEventListener('click',()=>this.turnAttach('x'));
       $('attachConfirm').addEventListener('click',()=>{const p=this.pendingAttach;if(p&&p.pose&&Hut.attach(this.inspItem,p.source,p.pose)){AU.place();this.cancelAttach();this.assemblyNotice='붙였어요! 「마지막 조각 떼기」로 되돌릴 수 있어요.';this.refreshInspect();}});
     }
-    this.inspRot={x:0.35,y:0.4};this.refreshInspect();
+    this.inspRot={x:0.35+(ITEMS[this.inspId].tilt||0)*0.7,y:0.4};this.refreshInspect();
   },
-  attachCandidates(){return this.inspItem?Hut.items.filter(it=>it!==this.inspItem&&Assemblage.parts(it).length===1&&!ITEMS[it.id].tool&&!ITEMS[it.id].special):[];},
+  attachCandidates(){return this.inspItem?Hut.items.filter(it=>it!==this.inspItem&&Assemblage.parts(it).length===1&&!ITEMS[it.id].tool&&!ITEMS[it.id].special&&!ITEMS[it.id].floor):[];},
   refreshInspect(){
     const it=ITEMS[this.inspId],parts=this.inspItem?Assemblage.parts(this.inspItem):null,joined=parts&&parts.length>1,quiet=joined||this.attachMode;
     $('insp').classList.toggle('working',!!this.inspItem);$('insp').classList.toggle('assembling',this.attachMode);
@@ -3042,7 +3182,7 @@ const UI={
     const r=$('inspRare');r.style.display=quiet||it.tool||it.special?'none':'';r.textContent=RARE_LABEL[it.r||1];r.className=it.r===2?'r2':it.r===3?'r3':'';
     $('inspDesc').textContent=quiet?'':(it.litter?(LITTER_LINES[this.inspId]||''):(it.d||''));$('inspDesc').hidden=!!quiet;
     const candidates=this.attachCandidates();
-    $('assembleBar').hidden=!this.inspItem||this.attachMode;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;
+    $('assembleBar').hidden=!this.inspItem||this.attachMode||!!it.floor;$('attachTray').hidden=!this.attachMode;$('attachTools').hidden=!this.attachMode;
     for(const id of ['attachGuide','attachSelection','attachGesture','attachTrayLabel'])$(id).hidden=true;
     $('attachPreview').hidden=true;$('assembleIntro').hidden=true;
     $('attachStart').disabled=candidates.length===0;$('attachStart').textContent=joined?'더 붙이기':'붙이기';$('detachLast').hidden=!joined;$('detachLast').disabled=!joined;
@@ -3362,6 +3502,10 @@ const Game={
   placeItem(){
     if(!this.canPlaceItem())return;
     const id=G.pouch[0];
+    if(ITEMS[id].floor){const sp=Hut.keepsakeSpot(id);if(sp){const it=Hut.place(id,sp[0],sp[1],false,true);
+      it.mesh.rotation.y=0.5+Math.PI/2+(Math.random()-0.5)*0.5;Hut.fly(it,new THREE.Vector3(0.16,-0.3,-0.5).applyQuaternion(camera.quaternion).add(camera.position),0.14);
+      G.pouch.shift();UI.pouch();View.place();
+      if(G.placed.length===1)UI.hint(G.touch?'놓은 물건을 누르면 돌려 볼 수 있습니다':'놓은 물건을 클릭하면 돌려 볼 수 있습니다',5000);return;}}
     if(Hut.placeSlot(id)){G.pouch.shift();UI.pouch();AU.place();View.place();if(G.placed.length===1)UI.hint(G.touch?'놓은 물건을 누르면 돌려 볼 수 있습니다':'놓은 물건을 클릭하면 돌려 볼 수 있습니다',5000);return;}
     const dir=viewDir();const eye=new THREE.Vector3(P.pos.x,P.camY,P.pos.z);
     // put it where the player is looking; if that spot is taken (hearth, furniture, other things), slide sideways so it stays in view
@@ -3826,7 +3970,7 @@ const Save={
     const g={};[...this.numbers,...this.flags].forEach(k=>g[k]=G[k]);g.pouch=G.pouch.slice();g.got={...G.got};
     const origin=it=>({id:it.id,x:it.x,z:it.z,slot:!!it.slot,order:it.order});
     const pos=Game.tr&&(Game.tr.kind==='climb'||Game.tr.kind==='fade')?Game.tr.to:P.pos;
-    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,memorySeen:!!Memory.figs[0]?.seen,memory:Memory.figs.map(f=>!!f.seen),ended:!!G.ended,
+    return {g,player:{scene:Game.sceneKey==='hut'?'hut':'surface',pos:pos.toArray(),yaw:P.yaw,pitch:P.pitch,crafting:G.state==='craft'},lastTop:Game.lastTop.toArray(),lastEraDig:Game.lastEraDig||0,card:false,keepsakes:true,memorySeen:!!Memory.figs[0]?.seen,memory:Memory.figs.map(f=>!!f.seen),ended:!!G.ended,
       hut:Hut.items.map(it=>({...origin(it),rotation:it.mesh.rotation.y,parts:Assemblage.parts(it).map(p=>({id:p.id,p:p.p.slice(),q:p.q.slice(),...(p.origin?{origin:{...p.origin}}:{})}))})),
       inner:{pool:Inner.pool.map(p=>p.slice()),poolCd:Inner.poolCd,poolCap:Inner.poolCap,sinceFind:Inner.sinceFind||0,nextFind:Inner.nextFind,tinks:Inner.tinks,
         items:Inner.items.map(it=>({id:it.id,pos:it.pos.toArray(),state:it.state,tool:!!it.tool,requiredTool:it.requiredTool||0})),
@@ -3861,7 +4005,8 @@ const Save={
     Terrain.chunks.forEach(c=>c.dirty=true);Terrain.dirtyCount=Terrain.chunks.length;Terrain.flush(Infinity);Terrain.revision=cleared?1:0;
     [...this.numbers,...this.flags].forEach(k=>G[k]=g[k]);G.pouch=g.pouch.slice();G.got={...g.got};G.age=Math.min(1,G.era/8);
     for(const it of [...Inner.items,...Inner.loose]){SURF.scene.remove(it.mesh);dispose(it.mesh);SURF.scene.remove(it.glint);}Inner.items=[];Inner.loose=[];Inner.falling=[];
-    Inner.pool=d.inner.pool.map(p=>p.slice());['poolCd','poolCap','sinceFind','nextFind','tinks'].forEach(k=>Inner[k]=d.inner[k]);
+    Inner.pool=d.inner.pool.map(p=>p.slice());
+    if(!d.keepsakes)Inner.pool.forEach((pool,b)=>{for(const id in ITEMS){const it=ITEMS[id];if(it.floor&&it.band===b&&!G.got[id])pool.splice(Math.floor(Math.random()*(pool.length+1)),0,id);}});['poolCd','poolCap','sinceFind','nextFind','tinks'].forEach(k=>Inner[k]=d.inner[k]);
     if(Inner.nextFind<14)Inner.nextFind=30;
     d.inner.items.forEach(saved=>{const pos=V3().fromArray(saved.pos),mesh=makeItemMesh(saved.id);mesh.position.copy(pos);
       if(saved.id==='stick'){mesh.rotation.z=0.4;mesh.scale.setScalar(1.25);}else if(!saved.tool)mesh.scale.multiplyScalar(INNER_ITEM_SCALE);
