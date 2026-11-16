@@ -686,9 +686,23 @@ const AU={
   tink(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(2600,0.16,'sine',0.11,t);this.tone(3900,0.1,'sine',0.045,t);this.tone(1300,0.08,'triangle',0.05,t);this.noise(0.05,'highpass',4000,1,0.05,t);},
   clank(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(880,0.6,'sine',0.13,t,undefined,860);this.tone(1340,0.45,'sine',0.075,t);this.tone(2620,0.3,'sine',0.04,t);this.noise(0.12,'bandpass',3000,6,0.18,t);this.tone(70,0.24,'sine',0.32,t,undefined,38);this.noise(0.3,'lowpass',200,1,0.2,t,undefined,true);},
   pickup(){if(!this.ctx)return;const t=this.ctx.currentTime;const base=[1046.5,1174.7,1318.5,1568,1760][Math.floor(Math.random()*5)];this.tone(300,0.08,'sine',0.11,t,undefined,700);this.tone(base,0.22,'triangle',0.11,t+0.04);this.tone(base*1.5,0.3,'triangle',0.09,t+0.13);this.tone(base*2,0.25,'sine',0.03,t+0.2);},
+  discover(){
+    if(!this.ctx)return;const t=this.ctx.currentTime;
+    // Two worn music-box tines: a dry touch, then a gently wavering ring.
+    const bell=(freq,at,dur,gain)=>{
+      const o=this.tone(freq,dur,'sine',gain,at,undefined,undefined,0.003);
+      const wobble=new Float32Array(25);
+      for(let i=0;i<wobble.length;i++){const k=i/(wobble.length-1);wobble[i]=Math.sin(k*dur*5.2*Math.PI*2)*3.5*(1-k)-k*2;}
+      o.detune.setValueCurveAtTime(wobble,at,dur);
+      this.tone(freq*2.73,dur*0.32,'sine',gain*0.15,at);
+      this.tone(freq*4.12,0.055,'sine',gain*0.045,at);
+    };
+    this.noise(0.025,'bandpass',1700,1.2,0.022,t);
+    bell(659.25,t,0.30,0.14);bell(783.99,t+0.18,0.67,0.16);
+  },
   pop(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(420,0.09,'sine',0.16,t,undefined,900);this.noise(0.06,'bandpass',1800,2,0.08,t);},
   pouchIn(){if(!this.ctx)return;const t=this.ctx.currentTime;this.noise(0.09,'bandpass',700,1.5,0.12,t);this.tone(220,0.1,'sine',0.12,t+0.02,undefined,160);},
-  full(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(220,0.18,'sine',0.13,t,undefined,160);this.tone(165,0.22,'sine',0.09,t+0.1,undefined,120);},
+  full(vol=1,delay=0){if(!this.ctx)return;const t=this.ctx.currentTime+delay;this.tone(220,0.18,'sine',0.13*vol,t,undefined,160);this.tone(165,0.22,'sine',0.09*vol,t+0.1,undefined,120);},
   place(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(190,0.1,'sine',0.22,t,undefined,120);this.noise(0.06,'lowpass',900,1,0.14,t);},
   land(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(105,0.14,'sine',0.22,t,undefined,55);this.noise(0.09,'lowpass',700,1,0.14,t);},
   step(kind){if(!this.ctx)return;const t=this.ctx.currentTime;
@@ -2851,7 +2865,7 @@ const Inner={
         const target=camPos.clone().add(new THREE.Vector3(0,-0.15,-0.55).applyQuaternion(camera.quaternion));
         it.mesh.position.lerpVectors(it.from,target,easeInOut(k));it.mesh.position.y+=Math.sin(k*Math.PI)*0.2;it.mesh.rotation.y+=dt*8;
         if(k>=1){S.remove(it.mesh);dispose(it.mesh);it.glint.visible=false;S.remove(it.glint);this.items.splice(i,1);
-          if(it.tool){const lvl=ITEMS[it.id].tool;G.tool=Math.max(G.tool,lvl);if(it.id==='stick')G.gotStick=true;if(it.id==='stonetool'){G.gotStone=true;G.hasStone=true;}it.glint.material.dispose();View.setTool(G.tool);AU.pickup();UI.toast(it.id,true);View.flourish();}
+          if(it.tool){const first=it.id==='stick'?!G.gotStick:!G.gotStone;const lvl=ITEMS[it.id].tool;G.tool=Math.max(G.tool,lvl);if(it.id==='stick')G.gotStick=true;if(it.id==='stonetool'){G.gotStone=true;G.hasStone=true;}it.glint.material.dispose();View.setTool(G.tool);UI.toast(it.id,true);if(first)AU.discover();else AU.pickup();View.flourish();}
           else this.collect(it.id,P,false);}}
     }
     for(let i=this.loose.length-1;i>=0;i--){const l=this.loose[i];l.cool-=dt;l.glint.material.rotation=t;
@@ -2875,12 +2889,13 @@ const Inner={
     Terrain.flush(6);
   },
   collect(id,P,litter){
+    const first=!G.got[id];
     G.got[id]=true;
-    if(G.pouch.length<POUCH){G.pouch.push(id);View.holdItem(id);UI.toast(id,false,litter);AU.pickup();setTimeout(()=>{UI.pouch(true);AU.pouchIn();},900);
-      if(G.pouch.length>=POUCH)setTimeout(()=>{AU.full();UI.hint('주머니가 가득 찼다.',3000);},1300);}
+    if(G.pouch.length<POUCH){G.pouch.push(id);View.holdItem(id);UI.toast(id,false,litter);if(first)AU.discover();else AU.pickup();setTimeout(()=>{UI.pouch(true);AU.pouchIn();},900);
+      if(G.pouch.length>=POUCH)setTimeout(()=>{AU.full(first?0.4:1);UI.hint('주머니가 가득 찼다.',3000);},1300);}
     else{const fwd=new THREE.Vector3(-Math.sin(P.yaw),0,-Math.cos(P.yaw));const pos=P.pos.clone().addScaledVector(fwd,0.4);pos.y+=0.2;
       for(let k=0;k<60;k++){if(Terrain.sample(pos.x,pos.y-0.02,pos.z)<=0)pos.y-=0.03;else break;}
-      this.addLoose(id,pos,litter);UI.toast(id,false,litter);AU.full();UI.pouchShake();UI.hint('주머니가 가득 찼다.',2600);}
+      this.addLoose(id,pos,litter);UI.toast(id,false,litter);if(first){AU.discover();AU.full(0.4,0.5);}else AU.full();UI.pouchShake();UI.hint('주머니가 가득 찼다.',2600);}
   },
   minimapRows(){return Math.max(0.3,-Terrain.deepY+0.12);},
   drawMinimap(ctx,w,h,P){
